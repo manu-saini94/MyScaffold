@@ -27,7 +27,7 @@
   inset: 0;
   background:
     radial-gradient(120% 120% at 30% 18%, var(--surface) 0%, var(--surface) 46%, color-mix(in srgb, var(--accent) 9%, var(--surface)) 100%);
-  border: 1.5px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 48%, transparent);
   box-shadow: var(--shadow);
   transition:
     box-shadow var(--dur-base) var(--ease-out),
@@ -46,14 +46,14 @@
 
 .glyph {
   position: relative;
-  width: 44%;
-  height: 44%;
+  width: 48%;
+  height: 48%;
   transition: transform var(--dur-base) var(--ease-out);
 }
 
 .icon:hover .glyph,
 .icon:focus-visible .glyph {
-  transform: scale(1.1) rotate(-3deg);
+  transform: scale(1.06);
 }
 
 // Locked: frosted, desaturated, with a lock badge.
@@ -98,5 +98,5 @@
   height: 100%;
   border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, var(--surface-glass), transparent 72%);
-  border: 1px solid var(--line);
+  border: 1px dashed var(--line);
 }

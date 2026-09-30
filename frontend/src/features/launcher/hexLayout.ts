@@ -77,3 +77,22 @@ export function neighbourInDirection(
   }
   return best
 }
+
+export interface FieldMetrics {
+  /** 1 ring = 7 cells (phones), 2 rings = 19 cells (wide screens). */
+  rings: number
+  pitch: number
+  cellSize: number
+  /** Fisheye radius in px. */
+  radius: number
+}
+
+export const WIDE_BREAKPOINT = 700
+
+/** Compact honeycomb sizing: big calm icons, few cells. Pure so it can be tested without a DOM. */
+export function fieldMetrics(width: number, height: number): FieldMetrics {
+  const rings = width < WIDE_BREAKPOINT ? 1 : 2
+  const minDim = Math.min(width, height)
+  const pitch = rings === 1 ? Math.min(150, Math.max(92, minDim * 0.34)) : Math.min(156, Math.max(100, minDim * 0.25))
+  return { rings, pitch, cellSize: pitch * 0.84, radius: pitch * (rings + 1.2) }
+}

@@ -3,7 +3,7 @@ import { GhostIcon, WorldIcon } from '../../components/WorldIcon/WorldIcon'
 import { useReducedMotion } from '../../hooks/useReducedMotion'
 import type { World } from '../../types/world'
 import { FieldEngine } from './fieldEngine'
-import { buildCells, neighbourInDirection, type Cell, type Direction } from './hexLayout'
+import { buildCells, fieldMetrics, neighbourInDirection, type Cell, type Direction } from './hexLayout'
 import { isWorldLocked } from './useWorlds'
 import { preloadWorld } from '../world/preload'
 import styles from './HoneycombField.module.scss'
@@ -24,9 +24,6 @@ const ARROWS: Record<string, Direction> = {
   ArrowDown: 'down',
 }
 
-function ringsFor(width: number): number {
-  return width < 560 ? 2 : width < 1024 ? 3 : 4
-}
 
 function LauncherCell({
   cell,
@@ -80,18 +77,15 @@ export function HoneycombField({ worlds, active, onCenterChange, onOpen, onPeekL
     return () => ro.disconnect()
   }, [])
 
-  const minDim = Math.min(size.w, size.h)
-  const pitch = Math.min(150, Math.max(86, minDim * 0.27))
-  const cellSize = pitch * 0.8
-  const rings = ringsFor(size.w)
+  const { rings, pitch, cellSize, radius } = fieldMetrics(size.w, size.h)
   const cells = useMemo(() => buildCells(rings, pitch), [rings, pitch])
   const worldCells = useMemo(() => cells.slice(0, worlds.length), [cells, worlds.length])
   const snapTargets = useMemo(() => worldCells.map((c) => c.index), [worldCells])
 
   // push layout to the engine after children have registered their motion values
   useLayoutEffect(() => {
-    engine.setLayout(cells, snapTargets, (minDim / 2) * 1.3)
-  }, [engine, cells, snapTargets, minDim])
+    engine.setLayout(cells, snapTargets, radius)
+  }, [engine, cells, snapTargets, radius])
 
   useEffect(() => {
     onCenterChange(Math.min(activeCell, worlds.length - 1))

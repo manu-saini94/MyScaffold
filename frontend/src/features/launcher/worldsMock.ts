@@ -1,3 +1,4 @@
+import { FOREVER_UNLOCK_AT } from '../../config'
 import type { World } from '../../types/world'
 
 // Local mock, shaped like the future API. Replaced by experienceApi.getWorlds later.
@@ -66,6 +67,6 @@ export const WORLDS_MOCK: readonly World[] = [
     tint: ['#2a1b4d', '#e50914'],
     photoCount: 0,
     locked: true,
-    unlockAt: '2027-02-14T00:00:00',
+    unlockAt: FOREVER_UNLOCK_AT,
   },
 ]

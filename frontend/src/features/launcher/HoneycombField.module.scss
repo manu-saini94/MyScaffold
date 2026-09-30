@@ -9,8 +9,8 @@
   cursor: grab;
   z-index: var(--z-field);
   // soft edge mask so faded icons melt into the background
-  -webkit-mask-image: radial-gradient(ellipse 60% 56% at 50% 50%, #000 46%, transparent 98%);
-  mask-image: radial-gradient(ellipse 60% 56% at 50% 50%, #000 46%, transparent 98%);
+  -webkit-mask-image: radial-gradient(ellipse 74% 66% at 50% 50%, #000 58%, transparent 100%);
+  mask-image: radial-gradient(ellipse 74% 66% at 50% 50%, #000 58%, transparent 100%);
 
   &:active {
     cursor: grabbing;
@@ -32,4 +32,8 @@
 
 .ghostCell {
   pointer-events: none;
+
+  > * {
+    opacity: 0.55; // memories not yet written stay faint
+  }
 }

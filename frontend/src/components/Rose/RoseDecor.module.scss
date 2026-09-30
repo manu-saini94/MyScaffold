@@ -9,37 +9,32 @@
 }
 
 .topLeft,
-.bottomRight,
-.watermark {
+.bottomRight {
   position: absolute;
   height: auto;
 }
 
+// Sprigs sit in the quiet bands (below the header, below the caption), never behind text.
 .topLeft {
-  top: -13%;
-  left: -17%;
-  transform: scaleX(-1) rotate(-6deg);
-  filter: drop-shadow(0 8px 14px rgba(120, 20, 40, 0.18));
+  top: 7%;
+  left: -9%;
+  transform: scaleX(-1) rotate(-2deg);
 }
 
 .bottomRight {
-  right: -9%;
-  bottom: -8%;
-  transform: rotate(172deg);
-  filter: drop-shadow(0 -8px 14px rgba(120, 20, 40, 0.16));
+  display: none; // phones keep only the top sprig: the caption owns the bottom band
+  right: -3%;
+  bottom: -4%;
+  transform: scaleX(-1);
 }
 
-.watermark {
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -52%) rotate(14deg);
-  opacity: 0.13;
+@media (min-width: 700px) {
+  .topLeft {
+    top: 6%;
+    left: -3%;
+  }
 
-  // line-art watermark: outlines only, so it reads as engraving rather than a pink cloud
-  path {
-    fill: none;
-    stroke: var(--accent);
-    stroke-width: 1.1;
-    vector-effect: non-scaling-stroke;
+  .bottomRight {
+    display: block;
   }
 }

@@ -1,40 +1,32 @@
 import type { CSSProperties } from 'react'
 
-const PETAL = 'M50 54 C30 52 16 34 28 19 C37 8 55 9 60 21 C64 32 58 46 50 54Z'
-const LEAF = 'M0 0 C8 -15 28 -17 42 -8 C31 6 12 11 0 0Z'
-const SPIRAL = 'M50 50 c-4 -1 -6 -6 -2 -9 c5 -3 11 1 9 7 c-2 6 -10 7 -14 2 c-4 -6 0 -14 8 -15'
+const LINE = {
+  fill: 'none',
+  strokeLinecap: 'round',
+  strokeLinejoin: 'round',
+  vectorEffect: 'non-scaling-stroke',
+} as const
 
-function layer(scale: number, offset: number, fill: string, strokeWidth: number) {
-  return [0, 1, 2, 3, 4].map((i) => (
-    <path
-      key={`${scale}-${i}`}
-      d={PETAL}
-      fill={fill}
-      stroke="var(--rose-line)"
-      strokeWidth={strokeWidth}
-      strokeLinejoin="round"
-      transform={`translate(50 50) rotate(${offset + i * 72}) scale(${scale}) translate(-50 -50)`}
-    />
-  ))
-}
-
-/** The bloom itself, drawn in a 100x100 box. Few paths, no gradients, colours come from theme tokens. */
+/** Side-view rose in a 100x100 box: spiralled bud, a rim of petals, a front swirl and a base. Six strokes, one accent dot. */
 function Bloom() {
   return (
-    <g>
-      {layer(1, 0, 'var(--rose-b)', 1.1)}
-      {layer(0.74, 36, 'var(--rose-a)', 1)}
-      {layer(0.46, 8, 'var(--rose-c)', 0.9)}
-      <path d={SPIRAL} fill="none" stroke="var(--rose-line)" strokeWidth="1.1" strokeLinecap="round" />
+    <g stroke="var(--accent)" strokeWidth="1.5">
+      <path {...LINE} d="M38 40 C33 27 41 17 52 14 C63 17 68 27 62 40" />
+      <path {...LINE} d="M46 20 C42 26 46 34 53 32 C58 30 58 23 53 21 C50 20 48 22 49 25" />
+      <path {...LINE} d="M38 40 C28 34 20 40 21 50 C22 66 34 78 50 80 C66 78 79 66 80 50 C81 40 72 34 62 40" />
+      <path {...LINE} d="M38 40 C40 46 46 48 50 46 C56 48 60 44 62 40" />
+      <path {...LINE} d="M30 52 C34 64 43 70 50 70 C58 70 66 64 70 52 M50 46 C45 54 45 63 50 70" />
+      <path {...LINE} d="M36 84 C42 92 58 92 64 84" />
+      <circle cx="53" cy="26" r="1.7" fill="var(--accent)" stroke="none" />
     </g>
   )
 }
 
 function Leaf({ x, y, rot, s = 1 }: { x: number; y: number; rot: number; s?: number }) {
   return (
-    <g transform={`translate(${x} ${y}) rotate(${rot}) scale(${s})`}>
-      <path d={LEAF} fill="var(--leaf)" stroke="var(--leaf-line)" strokeWidth="1" strokeLinejoin="round" />
-      <path d="M2 -1 C14 -7 26 -8 38 -7" fill="none" stroke="var(--leaf-line)" strokeWidth="0.8" strokeLinecap="round" />
+    <g transform={`translate(${x} ${y}) rotate(${rot}) scale(${s})`} stroke="var(--leaf-line)" strokeWidth="1.1">
+      <path {...LINE} d="M0 0 C8 -13 26 -15 40 -6 C29 7 11 10 0 0Z" />
+      <path {...LINE} d="M3 -1 C16 -6 27 -7 37 -6" />
     </g>
   )
 }
@@ -47,7 +39,7 @@ interface RoseProps {
   title?: string
 }
 
-/** Reusable inline-SVG red rose. `bloom` = single flower, `sprig` = bloom + bud + leaves on a stem for framing. */
+/** Reusable inline-SVG line-art rose. `bloom` = single flower, `sprig` = bloom + bud + leaves on a stem for framing. */
 export function Rose({ variant = 'bloom', size = 96, className, style, title }: RoseProps) {
   const a11y = title ? { role: 'img' as const, 'aria-label': title } : { 'aria-hidden': true as const }
   if (variant === 'bloom') {
@@ -59,22 +51,22 @@ export function Rose({ variant = 'bloom', size = 96, className, style, title }: 
   }
   return (
     <svg viewBox="0 0 200 200" width={size} height={size} className={className} style={style} {...a11y}>
-      <path
-        d="M14 192 C40 150 62 128 96 108 C118 95 128 84 132 70"
-        fill="none"
-        stroke="var(--leaf-line)"
-        strokeWidth="2.4"
-        strokeLinecap="round"
-      />
-      <path d="M62 132 C70 122 78 118 90 116" fill="none" stroke="var(--leaf-line)" strokeWidth="1.6" strokeLinecap="round" />
-      <Leaf x={40} y={158} rot={-58} s={1.1} />
-      <Leaf x={66} y={134} rot={12} s={1.25} />
-      <Leaf x={92} y={112} rot={-38} s={0.95} />
-      <Leaf x={120} y={98} rot={20} s={0.8} />
-      <g transform="translate(88 6) scale(0.98)">
-        <Bloom />
+      <g stroke="var(--leaf-line)" strokeWidth="1.3">
+        <path {...LINE} d="M14 192 C46 154 78 132 108 112 C126 102 138 102 141 98" />
+        <path {...LINE} d="M80 132 C80 120 74 110 66 102" />
       </g>
-      <g transform="translate(44 112) scale(0.36)">
+      <Leaf x={40} y={162} rot={-58} s={1.05} />
+      <Leaf x={70} y={139} rot={14} s={1.15} />
+      <Leaf x={104} y={115} rot={-40} s={0.9} />
+      <path
+        {...LINE}
+        d="M66 102 C58 96 57 86 63 80 C70 85 72 95 66 102Z"
+        stroke="var(--accent)"
+        strokeWidth="1.3"
+        fill="var(--accent)"
+        fillOpacity="0.85"
+      />
+      <g transform="translate(92 8) scale(0.98)">
         <Bloom />
       </g>
     </svg>

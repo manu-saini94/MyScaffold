@@ -20,15 +20,9 @@
   --display-tracking: -0.01em;
   --particle-kind: petals;
 
-  // Rose-motif palette (used by <Rose/>)
-  --rose-a: #c21836;
-  --rose-b: #94102a;
-  --rose-c: #e8566d;
-  --rose-line: rgba(70, 6, 20, 0.55);
-  --leaf: #5e7a55;
-  --leaf-line: rgba(38, 58, 36, 0.5);
-  --decor-opacity: 0.9;
-  --watermark-opacity: 0.055;
+  // Rose line-art: strokes use --accent; stems and leaves use --leaf-line
+  --leaf-line: rgba(58, 92, 58, 0.55);
+  --decor-opacity: 0.85;
 }
 
 @mixin theme-cinema {
@@ -52,12 +46,6 @@
   --display-tracking: -0.035em;
   --particle-kind: embers;
 
-  --rose-a: #7d0d18;
-  --rose-b: #520810;
-  --rose-c: #a3141f;
-  --rose-line: rgba(0, 0, 0, 0.5);
-  --leaf: #1d2a1d;
   --leaf-line: rgba(0, 0, 0, 0.5);
   --decor-opacity: 0;
-  --watermark-opacity: 0;
 }
