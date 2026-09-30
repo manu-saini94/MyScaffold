@@ -1,4 +1,13 @@
 # Dev conveniences. The Vite dev server proxies /api, so no CORS is configured.
+# Run with: mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=dev
+server:
+  servlet:
+    session:
+      cookie:
+        secure: false   # the session cookie must work on plain http://localhost
+ourstory:
+  dev-tools:
+    enabled: true       # serves the TEMPORARY /dev/import.html page
 logging:
   level:
     com.ourstory: DEBUG

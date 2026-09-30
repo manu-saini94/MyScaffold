@@ -26,6 +26,7 @@ Short log of choices and dependency justifications. Newest sections at the botto
 | flyway-core | Migrations (H2 support is in core) |
 | h2 (runtime) | Embedded file-mode database |
 | spring-boot-starter-test, spring-security-test | Tests |
+| org.jacoco:jacoco-maven-plugin 0.8.13 (build/test only) | Line-coverage report to check the 80% target on new code; no runtime footprint |
 
 ### Frontend
 
@@ -40,9 +41,17 @@ Short log of choices and dependency justifications. Newest sections at the botto
 | typescript, @types/* | Strict typing |
 | sass | SCSS modules and global style layer |
 | eslint, typescript-eslint, eslint-plugin-react-hooks, globals | Lint |
+| vitest | Test runner; shares Vite's config and transforms |
+| @vitest/coverage-v8 | Native V8 coverage to enforce the 80% target |
+| jsdom | DOM for the few tests that touch it; pure logic runs in node |
+| @testing-library/react, @testing-library/dom | Two component tests (launcher keyboard navigation, theme persistence); dom is the required peer |
 
 ## Open decisions
 - Fonts, rose motif and launcher density (see the Phase 0 report).
 - Google redirect URI origin (Vite `:5173` vs Spring `:8080`).
 - Stay in OAuth Testing mode (weekly reconnect) or publish the app.
 - Stay on Boot 3.5 or move to 4.x.
+- TODO (Phase 8): rate limiting on `/oauth2/**`, `/login/**` and `/api/**`. Do it at the reverse proxy, or add a filter then. Not implemented in the app.
+- TODO: pin the admin Google `sub` (and `hd` claim if a Workspace account is ever used) in addition to the verified email.
+- TODO (Phase 6): remove `/dev/**` from the jar when the real admin UI replaces the dev import page. Until then it is served only when `ourstory.dev-tools.enabled=true` (dev profile).
+- Note: `ourstory.viewer-cookie-secret` is unused by Phase 1 code; it is validated (prod: 32+ chars) so Phase 2 can rely on it.

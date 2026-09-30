@@ -1,10 +1,7 @@
+# Behind a TLS-terminating reverse proxy. Port 8080 must ONLY be reachable through that proxy: with
+# forward-headers-strategy=framework the app trusts X-Forwarded-* from whoever connects to it.
 server:
   forward-headers-strategy: framework
-  servlet:
-    session:
-      cookie:
-        secure: true
-        same-site: lax
-logging:
-  level:
-    root: INFO
+ourstory:
+  dev-tools:
+    enabled: false

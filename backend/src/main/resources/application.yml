@@ -1,6 +1,14 @@
 server:
   port: 8080
   shutdown: graceful
+  servlet:
+    session:
+      # Secure by default: application-dev.yml is the only place that relaxes `secure` (plain http://localhost).
+      timeout: 30m
+      cookie:
+        secure: true
+        http-only: true
+        same-site: lax
 
 spring:
   application:
@@ -10,6 +18,10 @@ spring:
       enabled: true
   lifecycle:
     timeout-per-shutdown-phase: 20s
+  http:
+    client:
+      connect-timeout: 10s
+      read-timeout: 60s
   datasource:
     url: jdbc:h2:file:${OURSTORY_DATA_DIR:./data}/db/ourstory
     username: sa
@@ -35,3 +47,14 @@ ourstory:
     client-secret: ${GOOGLE_CLIENT_SECRET:}
   viewer-cookie-secret: ${VIEWER_COOKIE_SECRET:}
   admin-email: ${ADMIN_EMAIL:}
+  post-login-url: /dev/import.html   # TEMPORARY (Phase 6 replaces the dev page)
+  import-job:
+    concurrency: 4
+    max-download-bytes: 15728640
+    max-attempts: 4
+    backoff-base-millis: 500
+    job-timeout: 2h          # whole job; afterwards it is FAILED (Import timed out)
+    download-timeout: 2m     # reading one image body end to end
+    min-free-bytes: 209715200  # refuse to write when less than 200 MB is free on the data volume
+  dev-tools:
+    enabled: false           # /dev/** static pages; only application-dev.yml turns this on

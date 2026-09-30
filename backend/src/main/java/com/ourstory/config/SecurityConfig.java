@@ -1,11 +1,14 @@
 package com.ourstory.config;
 
+import com.ourstory.auth.AdminAuthoritiesMapper;
+import com.ourstory.auth.AdminLoginHandlers;
+import com.ourstory.auth.AuthorizedClientCleaner;
+import com.ourstory.auth.ClientCleanupLogoutHandler;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.Set;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.actuate.autoconfigure.security.servlet.EndpointRequest;
 import org.springframework.boot.actuate.health.HealthEndpoint;
@@ -13,57 +16,97 @@ import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.CsrfConfigurer;
+import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
-import org.springframework.security.web.util.matcher.AndRequestMatcher;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
-import org.springframework.security.web.util.matcher.RequestMatcher;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+/**
+ * The single HTTP security policy. Deny by default: only the matchers below are reachable, everything else
+ * is denied. CSRF is enforced on every non-safe method for every path (no exemptions).
+ */
 @Configuration
 public class SecurityConfig {
 
-    private static final Set<String> SAFE_METHODS = Set.of("GET", "HEAD", "OPTIONS", "TRACE");
+    /** Everything the app serves is same-origin; inline script/style are not needed (dev page uses files). */
+    static final String CONTENT_SECURITY_POLICY = "default-src 'self'; img-src 'self' data:; style-src 'self'; "
+            + "script-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
+    static final String PERMISSIONS_POLICY = "camera=(), microphone=(), geolocation=()";
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http,
-            ObjectProvider<ClientRegistrationRepository> clients) throws Exception {
+            ObjectProvider<ClientRegistrationRepository> clients,
+            ObjectProvider<OAuth2AuthorizationRequestResolver> resolver,
+            AdminAuthoritiesMapper authoritiesMapper,
+            AuthorizedClientCleaner cleaner,
+            OurStoryProperties props) throws Exception {
         http
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers(EndpointRequest.to(HealthEndpoint.class)).permitAll()
-                .requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll()
-                .requestMatchers("/", "/index.html", "/assets/**").permitAll()
-                // Phase 0: everything else requires authentication (tightened per endpoint later).
-                .anyRequest().authenticated())
-            // API clients get a plain 401 (no redirect to a login page, so no redirect loops).
-            .exceptionHandling(ex -> ex.defaultAuthenticationEntryPointFor(
-                new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED), new AntPathRequestMatcher("/api/**")))
+            .authorizeHttpRequests(auth -> {
+                auth.requestMatchers(EndpointRequest.to(HealthEndpoint.class)).permitAll();
+                auth.requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll();
+                auth.requestMatchers("/", "/index.html", "/assets/**").permitAll();
+                // OAuth2 redirect, callback and Spring's login/error pages (all GET; state-checked by Spring).
+                auth.requestMatchers("/oauth2/**", "/login/**", "/error").permitAll();
+                if (props.devTools().enabled()) {
+                    // TEMPORARY dev page (Phase 6 replaces it): static files only, no data. Dev profile only.
+                    auth.requestMatchers("/dev/**").permitAll();
+                }
+                // Only the ADMIN role (verified email == ADMIN_EMAIL) may use the admin and media APIs.
+                // Phase 2 opens /api/media/** to viewer-cookie holders through MediaAccessPolicy.
+                auth.requestMatchers("/api/admin/**", "/api/media/**").hasRole("ADMIN");
+                auth.anyRequest().denyAll();
+            })
+            // Anonymous callers get a plain 401 everywhere (no redirect to a login page, no loops).
+            .exceptionHandling(ex -> ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
             .csrf(this::configureCsrf)
+            .headers(this::configureHeaders)
+            .logout(logout -> logout
+                .addLogoutHandler(new ClientCleanupLogoutHandler(cleaner))
+                .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler()))
             .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class);
 
         // Google login is enabled only when a client registration exists (GOOGLE_CLIENT_ID set).
         if (clients.getIfAvailable() != null) {
-            http.oauth2Login(Customizer.withDefaults());
+            http.oauth2Login(login -> {
+                login.successHandler(AdminLoginHandlers.success(props.postLoginUrl(), cleaner));
+                login.failureHandler(AdminLoginHandlers.failure());
+                login.userInfoEndpoint(info -> info.userAuthoritiesMapper(authoritiesMapper));
+                OAuth2AuthorizationRequestResolver custom = resolver.getIfAvailable();
+                if (custom != null) {
+                    login.authorizationEndpoint(endpoint -> endpoint.authorizationRequestResolver(custom));
+                }
+            });
         }
         return http.build();
     }
 
-    /** Cookie token a SPA can echo in X-XSRF-TOKEN; enforced only on mutating /api/admin/** calls. */
+    /**
+     * Cookie token a SPA echoes in X-XSRF-TOKEN. Spring's default matcher is used: every POST/PUT/PATCH/DELETE
+     * on every path (including /logout) needs the token. There are deliberately no exemptions; the OAuth2
+     * redirect and callback are GETs.
+     */
     private void configureCsrf(CsrfConfigurer<HttpSecurity> csrf) {
-        RequestMatcher mutating = request -> !SAFE_METHODS.contains(request.getMethod());
-        csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        repository.setCookieCustomizer(cookie -> cookie.sameSite("Lax"));
+        csrf.csrfTokenRepository(repository)
             // Plain (non-XOR) handler so the raw cookie value is accepted in the header.
-            .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
-            .requireCsrfProtectionMatcher(
-                new AndRequestMatcher(mutating, new AntPathRequestMatcher("/api/admin/**")));
+            .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler());
+    }
+
+    private void configureHeaders(HeadersConfigurer<HttpSecurity> headers) {
+        headers.contentSecurityPolicy(csp -> csp.policyDirectives(CONTENT_SECURITY_POLICY))
+            .referrerPolicy(referrer -> referrer.policy(ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+            .permissionsPolicyHeader(permissions -> permissions.policy(PERMISSIONS_POLICY));
     }
 
     /** Forces the deferred CSRF token to load so the XSRF-TOKEN cookie is issued on ordinary responses. */
