@@ -1,0 +1,35 @@
+@use '../../styles/mixins' as *;
+
+.field {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  touch-action: none; // we own pan gestures
+  cursor: grab;
+  z-index: var(--z-field);
+  // soft edge mask so faded icons melt into the background
+  -webkit-mask-image: radial-gradient(ellipse 60% 56% at 50% 50%, #000 46%, transparent 98%);
+  mask-image: radial-gradient(ellipse 60% 56% at 50% 50%, #000 46%, transparent 98%);
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+// Cells are anchored at the field centre; the engine drives transform + opacity only.
+.cell {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--cell);
+  height: var(--cell);
+  margin: calc(var(--cell) / -2) 0 0 calc(var(--cell) / -2);
+  opacity: 0; // engine takes over on mount
+  will-change: transform, opacity;
+  transform-origin: 50% 50%;
+}
+
+.ghostCell {
+  pointer-events: none;
+}

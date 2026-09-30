@@ -1,0 +1,23 @@
+// Theme-independent design tokens (spacing rhythm, motion, layers).
+// Spacing follows a deliberately uneven rhythm (tight -> airy) instead of a uniform 8px grid.
+@mixin static-tokens {
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.875rem;
+  --space-4: 1.25rem;
+  --space-5: 2rem;
+  --space-6: 3.25rem;
+  --space-7: 5.5rem;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 150ms;
+  --dur-base: 320ms;
+  --dur-slow: 600ms;
+
+  --header-h: 4rem;
+  --z-decor: 0;
+  --z-field: 1;
+  --z-header: 20;
+  --z-overlay: 30;
+}

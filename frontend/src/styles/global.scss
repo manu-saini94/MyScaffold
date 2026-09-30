@@ -1,0 +1,137 @@
+@use 'tokens';
+@use 'themes';
+@use 'mixins' as *;
+
+:root {
+  @include tokens.static-tokens;
+}
+
+:root,
+:root[data-theme='rose'] {
+  @include themes.theme-rose;
+}
+
+:root[data-theme='cinema'] {
+  @include themes.theme-cinema;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+#root {
+  min-height: 100dvh;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+// Cross-theme fallback fade (browsers without View Transitions)
+:root.theme-fading,
+:root.theme-fading *,
+:root.theme-fading *::before,
+:root.theme-fading *::after {
+  transition:
+    background-color 400ms ease,
+    color 400ms ease,
+    border-color 400ms ease,
+    fill 400ms ease,
+    stroke 400ms ease,
+    box-shadow 400ms ease !important;
+}
+
+// View-transition plumbing for the circular reveal
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 2;
+}
+
+@include reduced-motion {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+// ---- Theme atmospheres ------------------------------------------------------------------
+:root[data-theme='rose'] body {
+  background:
+    radial-gradient(80% 55% at 50% 0%, #fff 0%, transparent 70%),
+    radial-gradient(70% 60% at 50% 100%, rgba(224, 74, 99, 0.09), transparent 70%),
+    var(--bg);
+}
+
+:root[data-theme='cinema'] body {
+  background:
+    radial-gradient(70% 50% at 50% -10%, rgba(229, 9, 20, 0.22), transparent 70%),
+    radial-gradient(60% 45% at 50% 115%, rgba(229, 9, 20, 0.12), transparent 70%),
+    var(--bg);
+
+  // vignette
+  &::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 4;
+    pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 45%, rgba(0, 0, 0, 0.72) 100%);
+  }
+
+  // static film grain (tiny inline SVG noise; no animation, so it costs nothing per frame)
+  &::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 4;
+    pointer-events: none;
+    opacity: 0.09;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+}

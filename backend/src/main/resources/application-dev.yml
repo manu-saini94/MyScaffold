@@ -1,0 +1,5 @@
+# Dev conveniences. The Vite dev server proxies /api, so no CORS is configured.
+logging:
+  level:
+    com.ourstory: DEBUG
+    org.springframework.security: DEBUG

@@ -1,0 +1,1 @@
+-- Baseline migration (Phase 0): intentionally empty. The real schema arrives in Phase 2.

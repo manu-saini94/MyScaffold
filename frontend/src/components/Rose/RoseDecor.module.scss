@@ -1,0 +1,45 @@
+.decor {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-decor);
+  overflow: hidden;
+  pointer-events: none;
+  opacity: var(--decor-opacity);
+  transition: opacity var(--dur-slow) var(--ease-out);
+}
+
+.topLeft,
+.bottomRight,
+.watermark {
+  position: absolute;
+  height: auto;
+}
+
+.topLeft {
+  top: -13%;
+  left: -17%;
+  transform: scaleX(-1) rotate(-6deg);
+  filter: drop-shadow(0 8px 14px rgba(120, 20, 40, 0.18));
+}
+
+.bottomRight {
+  right: -9%;
+  bottom: -8%;
+  transform: rotate(172deg);
+  filter: drop-shadow(0 -8px 14px rgba(120, 20, 40, 0.16));
+}
+
+.watermark {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -52%) rotate(14deg);
+  opacity: 0.13;
+
+  // line-art watermark: outlines only, so it reads as engraving rather than a pink cloud
+  path {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 1.1;
+    vector-effect: non-scaling-stroke;
+  }
+}

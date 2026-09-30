@@ -1,0 +1,58 @@
+@use '../../styles/mixins' as *;
+
+.toggle {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 2.9rem;
+  height: 2.9rem;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 50%;
+  color: var(--accent);
+  @include glass;
+  box-shadow: var(--shadow);
+  transition:
+    transform var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
+
+  &:hover {
+    transform: translateY(-1px) scale(1.06);
+    box-shadow: var(--shadow-lift);
+  }
+
+  &:active {
+    transform: scale(0.94);
+  }
+
+  &:focus-visible {
+    @include focus-ring;
+  }
+}
+
+.icon {
+  position: absolute;
+  transition:
+    transform var(--dur-slow) var(--ease-out),
+    opacity var(--dur-base) ease;
+}
+
+// Rose theme shows the rose; Cinema shows the moon. Swap = spin + scale + fade.
+.rose {
+  display: grid;
+  place-items: center;
+}
+
+.toggle[data-theme-now='rose'] .moon {
+  opacity: 0;
+  transform: rotate(-70deg) scale(0.4);
+}
+
+.toggle[data-theme-now='cinema'] .rose {
+  opacity: 0;
+  transform: rotate(70deg) scale(0.4);
+}
+
+.toggle[data-theme-now='cinema'] {
+  color: var(--text);
+}

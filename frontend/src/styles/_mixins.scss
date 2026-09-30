@@ -1,0 +1,41 @@
+$bp-sm: 560px;
+$bp-md: 820px;
+$bp-lg: 1100px;
+
+@mixin up($bp) {
+  @media (min-width: $bp) {
+    @content;
+  }
+}
+
+@mixin reduced-motion {
+  @media (prefers-reduced-motion: reduce) {
+    @content;
+  }
+}
+
+// Designed focus state: an offset double ring that reads on both themes.
+@mixin focus-ring($offset: 3px) {
+  outline: 2px solid var(--accent);
+  outline-offset: $offset;
+  box-shadow: 0 0 0 $offset + 2px var(--bg), 0 0 22px 2px var(--glow);
+}
+
+@mixin glass {
+  background: var(--surface-glass);
+  -webkit-backdrop-filter: blur(14px) saturate(1.3);
+  backdrop-filter: blur(14px) saturate(1.3);
+  border: 1px solid var(--line);
+}
+
+@mixin visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

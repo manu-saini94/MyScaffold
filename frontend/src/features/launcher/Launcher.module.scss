@@ -1,0 +1,14 @@
+@use '../../styles/mixins' as *;
+
+.launcher {
+  position: relative;
+  z-index: var(--z-field);
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  padding-top: var(--header-h);
+}
+
+.srOnly {
+  @include visually-hidden;
+}

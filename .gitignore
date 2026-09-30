@@ -1,0 +1,20 @@
+# secrets and local data
+.env
+.env.*
+!.env.example
+data/
+*.log
+
+# build output
+backend/target/
+frontend/dist/
+frontend/node_modules/
+frontend/screenshots/
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+*.tsbuildinfo
