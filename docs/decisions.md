@@ -46,6 +46,17 @@ Short log of choices and dependency justifications. Newest sections at the botto
 | jsdom | DOM for the few tests that touch it; pure logic runs in node |
 | @testing-library/react, @testing-library/dom | Two component tests (launcher keyboard navigation, theme persistence); dom is the required peer |
 
+## Phase 2
+
+- **Viewer unlock:** one question and hashed answers in `settings` (PBKDF2-SHA256, 210k iterations, per-answer salt; NFKC, lower-case, whitespace-stripped before hashing). Bootstrapped from `OURSTORY_UNLOCK_*` env, idempotent; `OURSTORY_UNLOCK_FORCE_RESET=true` replaces. Not configured means unlock is impossible (503). Unlock answers are never in a committed file.
+- **Viewer session:** stateless signed cookie `os_viewer` (HMAC-SHA256, 30 days, HttpOnly, SameSite=Lax, Secure per profile) carrying a `viewer_epoch`. Bumping the epoch (credential change or "sign out everyone") invalidates every cookie. No HttpSession for viewers.
+- **Unlock rate limiting:** in memory, 5 failures per IP and 60 global per sliding 10 minutes, checked before any PBKDF2 work. Client IP is `getRemoteAddr()`, so port 8080 must be reachable only via the proxy.
+- **CSRF** is never exempted: the SPA GETs `/api/auth/question` first, then sends `X-XSRF-TOKEN` on unlock and lock.
+- **Settings table** uses quoted `"key"` and `"value"` columns (both are H2 reserved words).
+- **Content:** worlds, moments and letters in V4; deleting a photo cascades to its moments; letter bodies are stored as raw markdown and must be rendered safely on the client.
+- **Media access:** `MediaAccessPolicy` is role-based (VIEWER or ADMIN); the "photo must belong to a visible world" rule is added by the experience layer.
+- **Our Forever unlock:** 2027-02-14T00:00:00+05:30 (India time), stored as an instant; the server clock is the source of truth for the countdown.
+
 ## Open decisions
 - Fonts, rose motif and launcher density (see the Phase 0 report).
 - Google redirect URI origin (Vite `:5173` vs Spring `:8080`).
