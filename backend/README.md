@@ -112,6 +112,37 @@ failures (including a Picker 403 such as "API not enabled") are `502 google-api-
 `mvnw.cmd test` runs all tests and writes the JaCoCo report to `target/site/jacoco/index.html`
 (`target/site/jacoco/jacoco.csv` for numbers). Google is never called by tests (MockRestServiceServer / Mockito).
 
+## Content (Phase 2A)
+
+Migration `V4__content.sql` adds three tables (V3 belongs to settings; a version gap is fine on fresh databases):
+
+| Table | Notes |
+|---|---|
+| `world` | ULID id, unique kebab-case `slug`, `layout` (POLAROID_TABLE, FILM_STRIP, POSTCARDS, MEMORY_WALL, ENVELOPE, CONSTELLATION), optional `cover_media_id` (SET NULL when the photo is deleted), `theme_accent` `#rrggbb`, `sort_order`, `unlock_at` (null = open), intro/outro text, `music_url` (https only), `published`. Six default worlds are seeded (Our Forever unlocks 2027-02-14T00:00:00+05:30) |
+| `moment` | A photo in a world: caption, note ("back of the polaroid"), `happened_on`, `place`, `sort_order`, `is_favourite`. UNIQUE(world, media). Deleting the world or the photo removes the moment |
+| `letter` | Optional `world_id` (cascade), title, `body` (RAW markdown, <= 20,000 chars, stored as-is; the frontend renders it safely, the server never renders it as HTML), `reveal_trigger` WORLD_OUTRO or SEALED_ICON |
+
+Endpoints (all `/api/admin/**`: admin session, CSRF on mutating calls, errors are `application/problem+json`):
+
+| Method and path | Result |
+|---|---|
+| `GET /api/admin/worlds` | All worlds including unpublished, each with `momentCount` |
+| `GET /api/admin/worlds/{id}` | One world |
+| `POST /api/admin/worlds` | `201` + `Location`; appended last |
+| `PUT /api/admin/worlds/{id}` | Full update (sort order unchanged) |
+| `DELETE /api/admin/worlds/{id}` | `204`; cascades moments and letters |
+| `PUT /api/admin/worlds/reorder` `{orderedIds}` | Must be every world id exactly once, else `422`; returns the new list |
+| `GET /api/admin/worlds/{id}/moments` | Moments with media info (width, height, lqip, dominantColor, mimeType, takenAt) |
+| `PUT /api/admin/worlds/{id}/moments` `{moments:[{mediaId,caption,note,happenedOn,place,favourite}]}` | Atomic bulk replace; array order is display order |
+| `GET /api/admin/letters?worldId=` | All letters or one world's |
+| `POST` / `PUT /{id}` / `DELETE /{id}` `/api/admin/letters` | Letter CRUD (`201` + `Location` on create) |
+
+Rules: ids must be ULIDs (`400` otherwise); unknown ids `404`; duplicate slug `409`; bean-validation failures `400` with
+`errors:[{field,message}]`; moments: at most 500, no duplicate `mediaId`, every `mediaId` must exist (`422` with
+`missingMediaIds`), caption <= 500, note <= 2000, place <= 200; unknown cover media or letter world `422`.
+Content code never touches Google Photos or media files. Read methods for the experience layer:
+`WorldRepository.findPublished()`, `MomentRepository.listByWorld/countsByWorld/firstMediaIdsByWorld`, `LetterRepository.findByWorld`.
+
 ## JVM sizing
 
 Intended for a small host: `java -Xmx256m -jar target/our-story-0.0.1-SNAPSHOT.jar`
