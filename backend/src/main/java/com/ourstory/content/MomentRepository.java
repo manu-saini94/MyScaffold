@@ -1,6 +1,5 @@
 package com.ourstory.content;
 
-import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
@@ -90,15 +89,14 @@ public class MomentRepository {
                     """)
                 .param("id", m.id()).param("world", worldId).param("media", m.mediaId())
                 .param("caption", m.caption()).param("note", m.note())
-                .param("on", m.happenedOn() == null ? null : Date.valueOf(m.happenedOn()))
+                .param("on", m.happenedOn())
                 .param("place", m.place()).param("sort", position++).param("fav", m.favourite())
                 .update();
         }
     }
 
     private static MomentWithMedia map(ResultSet rs, int row) throws SQLException {
-        Date on = rs.getDate("happened_on");
-        LocalDate happenedOn = on == null ? null : on.toLocalDate();
+        LocalDate happenedOn = rs.getObject("happened_on", LocalDate.class);
         return new MomentWithMedia(rs.getString("id"), rs.getString("world_id"), rs.getString("media_id"),
                 rs.getString("caption"), rs.getString("note"), happenedOn, rs.getString("place"),
                 rs.getInt("sort_order"), rs.getBoolean("is_favourite"), rs.getString("mime_type"),

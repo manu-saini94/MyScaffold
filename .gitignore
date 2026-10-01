@@ -18,3 +18,7 @@ frontend/screenshots/
 .DS_Store
 Thumbs.db
 *.tsbuildinfo
+
+# graphify output (local knowledge graph)
+graphify-out/
+.graphify_*

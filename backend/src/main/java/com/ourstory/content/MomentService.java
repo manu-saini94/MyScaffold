@@ -12,6 +12,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -43,7 +44,13 @@ public class MomentService {
         requireNoDuplicates(inputs);
         requireMediaExist(inputs);
         List<Moment> toStore = inputs.stream().map(i -> toMoment(worldId, i)).toList();
-        moments.replaceAll(worldId, toStore);
+        try {
+            moments.replaceAll(worldId, toStore);
+        } catch (DataIntegrityViolationException raced) {
+            // The world or a photo vanished (or a duplicate appeared) between the checks above and the write.
+            throw new ApiException(HttpStatus.CONFLICT, "moments-conflict",
+                    "The world or some photos changed while saving. Reload and try again.");
+        }
         return list(worldId);
     }
 

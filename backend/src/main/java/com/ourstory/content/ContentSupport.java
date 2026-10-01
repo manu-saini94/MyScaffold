@@ -2,6 +2,7 @@ package com.ourstory.content;
 
 import com.ourstory.common.ApiException;
 import com.ourstory.common.UlidGenerator;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import org.springframework.http.HttpStatus;
@@ -12,9 +13,9 @@ final class ContentSupport {
     private ContentSupport() {
     }
 
-    /** Current time at millisecond precision, so responses match what the database stores. */
-    static Instant now() {
-        return Instant.now().truncatedTo(ChronoUnit.MILLIS);
+    /** Current time of the injected clock at millisecond precision, so responses match the database. */
+    static Instant now(Clock clock) {
+        return Instant.now(clock).truncatedTo(ChronoUnit.MILLIS);
     }
 
     /** Path/query ids are checked before they reach the database. */

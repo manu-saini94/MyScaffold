@@ -1,7 +1,18 @@
-# Behind a TLS-terminating reverse proxy. Port 8080 must ONLY be reachable through that proxy: with
-# forward-headers-strategy=framework the app trusts X-Forwarded-* from whoever connects to it.
+# Behind a TLS-terminating reverse proxy on the same host (or a network you control).
+#
+# Client IP policy: Tomcat's RemoteIpValve (forward-headers-strategy=native) replaces the peer address with the
+# address from X-Forwarded-For ONLY when the TCP peer is one of the trusted proxies below. The default trusts the
+# loopback address only, so with no trusted proxy configured a client-supplied X-Forwarded-For is IGNORED.
+# The proxy must OVERWRITE (not append to) X-Forwarded-For with the real client address, and port 8080 must be
+# reachable only from the proxy. Set OURSTORY_TRUSTED_PROXIES to a regular expression matching the proxy's
+# address(es), for example 10\.0\.0\.5 (it is matched against the whole peer address).
 server:
-  forward-headers-strategy: framework
+  forward-headers-strategy: native
+  tomcat:
+    remoteip:
+      remote-ip-header: X-Forwarded-For
+      protocol-header: X-Forwarded-Proto
+      internal-proxies: ${OURSTORY_TRUSTED_PROXIES:127\.\d{1,3}\.\d{1,3}\.\d{1,3}|0:0:0:0:0:0:0:1|::1}
 ourstory:
   dev-tools:
     enabled: false

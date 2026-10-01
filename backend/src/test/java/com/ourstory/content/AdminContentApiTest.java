@@ -119,9 +119,15 @@ class AdminContentApiTest extends ContentTestBase {
                 .andExpect(jsonPath("$.title").value("My World"));
         send(put("/api/admin/worlds/" + id), worldJson("crud-renamed")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.slug").value("crud-renamed")).andExpect(jsonPath("$.id").value(id));
-        send(delete("/api/admin/worlds/" + id), null).andExpect(status().isNoContent());
+        send(delete("/api/admin/worlds/" + id), null).andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.type").value("urn:ourstory:problem:confirmation-required"))
+                .andExpect(jsonPath("$.momentCount").value(0));
+        send(delete("/api/admin/worlds/" + id + "?confirm=false"), null).andExpect(status().isBadRequest());
+        send(delete("/api/admin/worlds/" + id + "?confirm=maybe"), null).andExpect(status().isBadRequest());
+        send(delete("/api/admin/worlds/" + id + "?confirm=true"), null).andExpect(status().isNoContent());
         mvc.perform(get("/api/admin/worlds/" + id).with(admin())).andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.type").value("urn:ourstory:problem:not-found"));
+        send(delete("/api/admin/worlds/" + id + "?confirm=true"), null).andExpect(status().isNotFound());
         send(delete("/api/admin/worlds/" + id), null).andExpect(status().isNotFound());
         send(put("/api/admin/worlds/" + id), worldJson("zzz")).andExpect(status().isNotFound());
     }
@@ -131,7 +137,7 @@ class AdminContentApiTest extends ContentTestBase {
         mvc.perform(get("/api/admin/worlds/not-a-ulid").with(admin())).andExpect(status().isBadRequest());
         mvc.perform(get("/api/admin/worlds/not-a-ulid/moments").with(admin())).andExpect(status().isBadRequest());
         send(put("/api/admin/worlds/x'--"), worldJson("abc")).andExpect(status().isBadRequest());
-        send(delete("/api/admin/worlds/nope"), null).andExpect(status().isBadRequest());
+        send(delete("/api/admin/worlds/nope?confirm=true"), null).andExpect(status().isBadRequest());
         send(put("/api/admin/worlds/nope/moments"), "{\"moments\":[]}").andExpect(status().isBadRequest());
         send(put("/api/admin/letters/nope"), "{}").andExpect(status().isBadRequest());
         send(delete("/api/admin/letters/nope"), null).andExpect(status().isBadRequest());

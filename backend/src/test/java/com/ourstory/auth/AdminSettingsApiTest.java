@@ -48,7 +48,7 @@ class AdminSettingsApiTest {
 
     @BeforeEach
     void freshWindow() {
-        clock.advance(Duration.ofMinutes(11));
+        clock.advance(Duration.ofMinutes(61));
     }
 
     private JsonNode getSettings() throws Exception {
@@ -106,9 +106,10 @@ class AdminSettingsApiTest {
                         "{\"tagline\":\"changed\",\"defaultTheme\":\"neon\",\"bogus\":1,\"specialDate\":\"x\"}")
                         .with(admin()))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors.defaultTheme").exists())
-                .andExpect(jsonPath("$.errors.bogus").value("Unknown setting"))
-                .andExpect(jsonPath("$.errors.specialDate").exists())
+                .andExpect(jsonPath("$.errors").isArray())
+                .andExpect(jsonPath("$.errors[?(@.field=='defaultTheme')]").exists())
+                .andExpect(jsonPath("$.errors[?(@.field=='bogus')].message").value("Unknown setting"))
+                .andExpect(jsonPath("$.errors[?(@.field=='specialDate')]").exists())
                 .andExpect(jsonPath("$.type").value("urn:ourstory:problem:validation-failed"));
         assertThat(settings.tagline()).isNotEqualTo("changed");
         mvc.perform(csrfPut(mvc, "/api/admin/settings", "[1]").with(admin())).andExpect(status().isBadRequest());
@@ -121,10 +122,12 @@ class AdminSettingsApiTest {
     @Test
     void invalidAnswersAreRejected() throws Exception {
         for (String body : new String[] {"{\"unlockAnswers\":[]}", "{\"unlockAnswers\":\"Sample\"}",
-                "{\"unlockAnswers\":[\"\"]}", "{\"unlockAnswers\":[1]}",
+                "{\"unlockAnswers\":[\"\"]}", "{\"unlockAnswers\":[1]}", "{\"unlockAnswers\":[\"abc\"]}",
+                "{\"unlockAnswers\":[\"a b c\"]}",
                 "{\"unlockAnswers\":[\"a\",\"b\",\"c\",\"d\",\"e\",\"f\",\"g\",\"h\",\"i\",\"j\",\"k\"]}"}) {
             mvc.perform(csrfPut(mvc, "/api/admin/settings", body).with(admin()))
-                    .andExpect(status().isBadRequest()).andExpect(jsonPath("$.errors.unlockAnswers").exists());
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.errors[?(@.field=='unlockAnswers')]").exists());
         }
         assertThat(settings.unlockAnswerHashes()).hasSize(2);
     }
@@ -136,7 +139,7 @@ class AdminSettingsApiTest {
         mvc.perform(csrfPut(mvc, "/api/admin/settings", "{\"unlockAnswers\":[\"New Answer\",\"other\"]}")
                         .with(admin()))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.unlockAnswersConfigured").value(2));
-        assertThat(settings.unlockAnswerHashes()).allMatch(h -> h.startsWith("pbkdf2-sha256$"))
+        assertThat(settings.unlockAnswerHashes()).allMatch(h -> h.startsWith("pbkdf2-sha256-p1$"))
                 .noneMatch(h -> h.toLowerCase().contains("newanswer"));
         mvc.perform(get(MEDIA).cookie(viewer)).andExpect(status().isUnauthorized());
         mvc.perform(csrfPost(mvc, "/api/auth/unlock", "10.2.2.2", unlockBody(ANSWER)))
@@ -168,5 +171,64 @@ class AdminSettingsApiTest {
                 .andExpect(status().isNoContent());
         assertThat(settings.viewerEpoch()).isEqualTo(before + 1);
         mvc.perform(get(MEDIA).cookie(viewer)).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void writingTheSameQuestionOrAnswersDoesNotSignAnyoneOut() throws Exception {
+        Cookie viewer = unlockedCookie(mvc, "10.2.5.1");
+        long before = settings.viewerEpoch();
+        mvc.perform(csrfPut(mvc, "/api/admin/settings",
+                        "{\"unlockQuestion\":\"Test question?\",\"unlockAnswers\":[\" SAMPLE \",\"Test\"]}")
+                        .with(admin()))
+                .andExpect(status().isOk());
+        assertThat(settings.viewerEpoch()).isEqualTo(before);
+        mvc.perform(get(MEDIA).cookie(viewer)).andExpect(status().isNotFound()); // still authorised
+        // A genuinely different answer set does bump the epoch.
+        mvc.perform(csrfPut(mvc, "/api/admin/settings", "{\"unlockAnswers\":[\"Sample\"]}").with(admin()))
+                .andExpect(status().isOk());
+        assertThat(settings.viewerEpoch()).isGreaterThan(before);
+        mvc.perform(csrfPut(mvc, "/api/admin/settings", "{\"unlockAnswers\":[\"Sample\",\"test\"]}").with(admin()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void heroMediaIdsMustBeUniqueAndExist() throws Exception {
+        String ghost = "01HZX0000000000000000000AB";
+        mvc.perform(csrfPut(mvc, "/api/admin/settings", "{\"heroMediaIds\":[\"" + ghost + "\"]}").with(admin()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[?(@.field=='heroMediaIds')].message").value("Some photos do not exist"));
+        mvc.perform(csrfPut(mvc, "/api/admin/settings",
+                        "{\"heroMediaIds\":[\"" + ghost + "\",\"" + ghost + "\"]}").with(admin()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[?(@.field=='heroMediaIds')].message").value("Entries must be unique"));
+        mvc.perform(csrfPut(mvc, "/api/admin/settings", "{\"heroMediaIds\":[]}").with(admin()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void settingsChangesAreLoggedByKeyNameOnly() throws Exception {
+        ch.qos.logback.classic.Logger audit =
+                (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(SecurityAudit.LOGGER);
+        ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent> appender =
+                new ch.qos.logback.core.read.ListAppender<>();
+        appender.start();
+        audit.addAppender(appender);
+        try {
+            mvc.perform(csrfPut(mvc, "/api/admin/settings",
+                    "{\"tagline\":\"A very private tagline\",\"unlockAnswers\":[\"Brand New Answer\"]}").with(admin()))
+                    .andExpect(status().isOk());
+            mvc.perform(csrfPost(mvc, "/api/admin/settings/sign-out-everyone", "10.2.6.1", null).with(admin()))
+                    .andExpect(status().isNoContent());
+            mvc.perform(csrfPut(mvc, "/api/admin/settings", "{\"unlockAnswers\":[\"Sample\",\"test\"],"
+                    + "\"tagline\":\"Love you till eternity and back\"}").with(admin())).andExpect(status().isOk());
+            String all = appender.list.stream().map(e -> e.getFormattedMessage())
+                    .collect(java.util.stream.Collectors.joining(", "));
+            assertThat(all).contains("admin settings changed keys=[tagline, unlockAnswers]")
+                    .contains("signed out every viewer");
+            assertThat(all).doesNotContain("private tagline").doesNotContain("Brand New").doesNotContain("brandnew")
+                    .doesNotContain("pbkdf2");
+        } finally {
+            audit.detachAppender(appender);
+        }
     }
 }

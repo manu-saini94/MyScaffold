@@ -63,3 +63,5 @@ ourstory:
     unlock-question: ${OURSTORY_UNLOCK_QUESTION:}
     unlock-answers: ${OURSTORY_UNLOCK_ANSWERS:}      # comma-separated
     unlock-force-reset: ${OURSTORY_UNLOCK_FORCE_RESET:false}
+    # Policy defaults (see README "Viewer access"): cookie 7 days, PBKDF2 600000 iterations (peppered), 5 failures
+    # per client (IPv6 /64) per 10 minutes, 30 failures overall per hour.

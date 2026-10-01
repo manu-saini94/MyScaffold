@@ -178,7 +178,7 @@ class ContentRepositoryTest extends ContentTestBase {
     }
 
     @Test
-    void deletingAWorldRemovesItsMomentsAndLettersOnly() {
+    void deletingAWorldRemovesItsMomentsAndOrphansItsLettersOnly() {
         World w = newWorld("cascade-world", 20);
         World other = newWorld("cascade-other", 21);
         String photo = seedMedia();
@@ -195,7 +195,9 @@ class ContentRepositoryTest extends ContentTestBase {
         assertThat(letters.findByWorld(w.id())).isEmpty();
         assertThat(letters.findByWorld(other.id())).hasSize(1);
         assertThat(moments.listByWorld(other.id())).hasSize(1);
-        assertThat(letters.findAll()).hasSize(2);
+        // The deleted world's letter survives with no world (V5: ON DELETE SET NULL).
+        assertThat(letters.findAll()).hasSize(3);
+        assertThat(letters.findAll()).filteredOn(l -> l.worldId() == null).hasSize(2);
         assertThat(media.existsById(photo)).isTrue();
     }
 

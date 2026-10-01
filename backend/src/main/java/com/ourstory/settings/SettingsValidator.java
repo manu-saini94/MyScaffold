@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * Per-key validation of admin-editable settings. Collects every problem and reports them together as a
- * 400 ProblemDetail with an {@code errors} object (field name to message). Unknown keys are rejected.
+ * 400 ProblemDetail with an {@code errors} array of {@code {field, message}}. Unknown keys are rejected.
  */
 @Component
 public class SettingsValidator {
@@ -69,14 +69,21 @@ public class SettingsValidator {
     }
 
     public static ApiException fieldErrors(Map<String, String> errors) {
-        return new ApiException(HttpStatus.BAD_REQUEST, "validation-failed", "Invalid settings",
-                Map.of("errors", Map.copyOf(errors)));
+        List<Map<String, String>> list = errors.entrySet().stream()
+                .map(e -> Map.of("field", e.getKey(), "message", e.getValue())).toList();
+        return new ApiException(HttpStatus.BAD_REQUEST, "validation-failed", "Validation failed",
+                Map.of("errors", list));
     }
 
     public static void throwIfAny(Map<String, String> errors) {
         if (!errors.isEmpty()) {
             throw fieldErrors(errors);
         }
+    }
+
+    /** Same rules the admin API applies to {@code unlockQuestion}: 1 to 300 characters, no control characters. */
+    public static String validQuestion(String raw) {
+        return text(com.fasterxml.jackson.databind.node.TextNode.valueOf(raw == null ? "" : raw), 1, MAX_QUESTION);
     }
 
     private String validateOne(String key, JsonNode node) {

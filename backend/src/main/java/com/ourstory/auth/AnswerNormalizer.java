@@ -8,6 +8,8 @@ import java.util.Optional;
 public final class AnswerNormalizer {
 
     public static final int MAX_LENGTH = 100;
+    /** Shortest NORMALISED answer that may be stored (unlock attempts of any length 1 to 100 are still compared). */
+    public static final int MIN_STORED_LENGTH = 4;
 
     private AnswerNormalizer() {
     }
@@ -26,5 +28,10 @@ public final class AnswerNormalizer {
             return Optional.empty();
         }
         return Optional.of(out.toString());
+    }
+
+    /** Like {@link #normalize} but also empty when fewer than {@value #MIN_STORED_LENGTH} characters remain. */
+    public static Optional<String> normalizeForStorage(String raw) {
+        return normalize(raw).filter(n -> n.codePointCount(0, n.length()) >= MIN_STORED_LENGTH);
     }
 }

@@ -8,3 +8,5 @@ ourstory:
   import-job:
     backoff-base-millis: 1
     min-free-bytes: 0
+  viewer:
+    pbkdf2-iterations: 1000   # tests only; the prod profile refuses < 600000

@@ -9,6 +9,7 @@ import com.ourstory.content.ContentDtos.ReorderRequest;
 import com.ourstory.content.ContentDtos.WorldRequest;
 import com.ourstory.content.ContentDtos.WorldResponse;
 import com.ourstory.media.MediaRepository;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
@@ -25,9 +26,11 @@ public class WorldService {
     private final MomentRepository moments;
     private final MediaRepository media;
     private final UlidGenerator ulids;
+    private final Clock clock;
 
     public WorldService(WorldRepository worlds, MomentRepository moments, MediaRepository media,
-            UlidGenerator ulids) {
+            UlidGenerator ulids, Clock clock) {
+        this.clock = clock;
         this.worlds = worlds;
         this.moments = moments;
         this.media = media;
@@ -46,8 +49,8 @@ public class WorldService {
     public WorldResponse create(WorldRequest req) {
         requireSlugFree(req.slug(), null);
         requireCoverExists(req.coverMediaId());
-        Instant now = ContentSupport.now();
-        World world = build(ulids.next(), req, worlds.nextSortOrder(), now, now);
+        Instant now = ContentSupport.now(clock);
+        World world = build(ulids.next(), req, worlds.nextSortOrder(), now, now, null);
         try {
             worlds.insert(world);
         } catch (DuplicateKeyException race) {
@@ -60,17 +63,31 @@ public class WorldService {
         World existing = require(id);
         requireSlugFree(req.slug(), id);
         requireCoverExists(req.coverMediaId());
-        World updated = build(id, req, existing.sortOrder(), existing.createdAt(), ContentSupport.now());
+        World updated = build(id, req, existing.sortOrder(), existing.createdAt(), ContentSupport.now(clock),
+                existing);
         try {
-            worlds.update(updated);
+            if (!worlds.update(updated)) {
+                throw ApiException.notFound("World");
+            }
         } catch (DuplicateKeyException race) {
             throw slugConflict(req.slug());
         }
         return WorldResponse.of(updated, moments.countsByWorld().getOrDefault(id, 0));
     }
 
-    /** Moments and letters of the world are removed by the database cascade. */
-    public void delete(String id) {
+    /**
+     * Deleting a world removes its moments (database cascade) but KEEPS its letters (world_id becomes NULL;
+     * world-less letters are never shown to viewers). Because that is destructive the caller must confirm.
+     */
+    public void delete(String id, boolean confirmed) {
+        require(id);
+        if (!confirmed) {
+            int momentCount = moments.countsByWorld().getOrDefault(id, 0);
+            throw new ApiException(HttpStatus.BAD_REQUEST, "confirmation-required",
+                    "Deleting this world removes its " + momentCount + " moment(s); its letters are kept but "
+                            + "no longer shown to viewers. Repeat the request with ?confirm=true to proceed.",
+                    Map.of("momentCount", momentCount));
+        }
         if (!worlds.delete(id)) {
             throw ApiException.notFound("World");
         }
@@ -107,10 +124,16 @@ public class WorldService {
         return new ApiException(HttpStatus.CONFLICT, "slug-conflict", "A world with slug '" + slug + "' exists");
     }
 
-    private static World build(String id, WorldRequest r, int sortOrder, Instant created, Instant updated) {
+    /**
+     * @param existing the stored world on update (omitted {@code published} and {@code unlockAt} keep its
+     *                 values), or null on create (published defaults to true, unlockAt to open)
+     */
+    private static World build(String id, WorldRequest r, int sortOrder, Instant created, Instant updated,
+            World existing) {
+        boolean published = r.published() != null ? r.published() : existing == null || existing.published();
+        Instant unlockAt = r.unlockAtOr(existing == null ? null : existing.unlockAt());
         return new World(id, r.slug(), r.title().strip(), blankToNull(r.subtitle()), blankToNull(r.tagline()),
-                r.layout(), r.coverMediaId(), r.themeAccent(), sortOrder, r.unlockAt(),
-                blankToNull(r.introText()), blankToNull(r.outroText()), r.musicUrl(),
-                r.published() == null || r.published(), created, updated);
+                r.layout(), r.coverMediaId(), r.themeAccent(), sortOrder, unlockAt,
+                blankToNull(r.introText()), blankToNull(r.outroText()), r.musicUrl(), published, created, updated);
     }
 }

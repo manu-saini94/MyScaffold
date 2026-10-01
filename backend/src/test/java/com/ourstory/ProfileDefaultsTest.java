@@ -43,7 +43,11 @@ class ProfileDefaultsTest {
     @Test
     void prodTrustsTheProxyKeepsCookiesSecureAndDevToolsOff() {
         Properties prod = load("application-prod.yml");
-        assertThat(prod.getProperty("server.forward-headers-strategy")).isEqualTo("framework");
+        // Tomcat RemoteIpValve, fed by properties: the header is trusted only from the configured proxies.
+        assertThat(prod.getProperty("server.forward-headers-strategy")).isEqualTo("native");
+        assertThat(prod.getProperty("server.tomcat.remoteip.remote-ip-header")).isEqualTo("X-Forwarded-For");
+        assertThat(prod.getProperty("server.tomcat.remoteip.internal-proxies"))
+                .startsWith("${OURSTORY_TRUSTED_PROXIES:").doesNotContain("192").doesNotContain("10\\.\\d");
         assertThat(prod.getProperty("server.servlet.session.cookie.secure")).isNull(); // inherits true
         assertThat(prod.getProperty("ourstory.dev-tools.enabled")).isEqualTo("false");
     }

@@ -16,6 +16,8 @@ import org.springframework.stereotype.Component;
 public class StartupConfigValidator {
 
     static final int MIN_VIEWER_SECRET_LENGTH = 32;
+    /** Words that make a secret a placeholder when nothing but digits and these words is left. */
+    private static final List<String> PLACEHOLDER_WORDS = List.of("changeme", "secret", "password");
     private static final Pattern HOST =
             Pattern.compile("^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$");
 
@@ -74,6 +76,16 @@ public class StartupConfigValidator {
         return value == null || value.isBlank();
     }
 
+    /** True when the secret is only digits, separators and placeholder words such as "change-me" or "secret". */
+    static boolean isPlaceholder(String secret) {
+        String reduced = secret.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9]", "");
+        String stripped = reduced;
+        for (String word : PLACEHOLDER_WORDS) {
+            stripped = stripped.replace(word, "");
+        }
+        return !stripped.equals(reduced) && stripped.replaceAll("[0-9]", "").isEmpty();
+    }
+
     /** Production-only rules. */
     @Component
     @Profile("prod")
@@ -85,6 +97,11 @@ public class StartupConfigValidator {
                 throw new ConfigurationProblemException(List.of(
                         "VIEWER_COOKIE_SECRET must be set to at least " + MIN_VIEWER_SECRET_LENGTH
                                 + " characters in the prod profile (for example `openssl rand -base64 48`)"));
+            }
+            if (isPlaceholder(secret)) {
+                throw new ConfigurationProblemException(List.of(
+                        "VIEWER_COOKIE_SECRET looks like a placeholder (change-me, secret, password ...); "
+                                + "generate a random one, for example `openssl rand -base64 48`"));
             }
         }
     }

@@ -1,11 +1,25 @@
 package com.ourstory.common;
 
+import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -28,6 +42,78 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return ResponseEntity.status(ex.status()).body(pd);
     }
 
+    // --- validation: ONE error shape everywhere: 400 + errors:[{field,message}], never the rejected value ---
+
+    @Override
+    protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex,
+            HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        List<Map<String, String>> errors = new ArrayList<>();
+        for (FieldError e : ex.getBindingResult().getFieldErrors()) {
+            errors.add(fieldError(e.getField(), e.getDefaultMessage()));
+        }
+        ex.getBindingResult().getGlobalErrors().forEach(e -> errors.add(fieldError("body", e.getDefaultMessage())));
+        return validationResponse(errors);
+    }
+
+    @Override
+    protected ResponseEntity<Object> handleHandlerMethodValidationException(HandlerMethodValidationException ex,
+            HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        List<Map<String, String>> errors = ex.getParameterValidationResults().stream()
+                .flatMap(r -> r.getResolvableErrors().stream()
+                        .map(e -> fieldError(String.valueOf(r.getMethodParameter().getParameterName()),
+                                e.getDefaultMessage())))
+                .toList();
+        return validationResponse(errors);
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    ResponseEntity<Object> handleConstraintViolation(ConstraintViolationException ex) {
+        List<Map<String, String>> errors = ex.getConstraintViolations().stream()
+                .map(ApiExceptionHandler::violation).collect(Collectors.toList());
+        return validationResponse(errors);
+    }
+
+    @Override
+    protected ResponseEntity<Object> handleHttpMessageNotReadable(HttpMessageNotReadableException ex,
+            HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        if (RequestBodyTooLargeException.isCausedBy(ex)) {
+            return payloadTooLarge();
+        }
+        if (ex.getCause() instanceof MismatchedInputException bad && !bad.getPath().isEmpty()) {
+            String field = bad.getPath().stream()
+                    .map(r -> r.getFieldName() != null ? r.getFieldName() : "[" + r.getIndex() + "]")
+                    .collect(Collectors.joining(".")).replace(".[", "[");
+            return validationResponse(List.of(fieldError(field, "Invalid value or type")));
+        }
+        return validationResponse(List.of(fieldError("body", "Malformed or missing JSON request body")));
+    }
+
+    private static ResponseEntity<Object> payloadTooLarge() {
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.PAYLOAD_TOO_LARGE,
+                "The request body is too large");
+        pd.setTitle(HttpStatus.PAYLOAD_TOO_LARGE.getReasonPhrase());
+        pd.setType(URI.create("urn:ourstory:problem:payload-too-large"));
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(pd);
+    }
+
+    private static Map<String, String> violation(ConstraintViolation<?> v) {
+        String path = v.getPropertyPath().toString();
+        String field = path.contains(".") ? path.substring(path.lastIndexOf('.') + 1) : path;
+        return fieldError(field, v.getMessage());
+    }
+
+    private static Map<String, String> fieldError(String field, String message) {
+        return Map.of("field", field, "message", message == null ? "invalid" : message);
+    }
+
+    private static ResponseEntity<Object> validationResponse(List<Map<String, String>> errors) {
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Validation failed");
+        pd.setTitle(HttpStatus.BAD_REQUEST.getReasonPhrase());
+        pd.setType(URI.create("urn:ourstory:problem:validation-failed"));
+        pd.setProperty("errors", errors);
+        return ResponseEntity.badRequest().body(pd);
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     ResponseEntity<ProblemDetail> handleDenied(AccessDeniedException ex) {
         ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, "Access denied");
@@ -41,7 +127,10 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
      * real failure and takes the generic path.
      */
     @ExceptionHandler(IOException.class)
-    ResponseEntity<ProblemDetail> handleIo(IOException ex, HttpServletResponse response) {
+    ResponseEntity<?> handleIo(IOException ex, HttpServletResponse response) {
+        if (RequestBodyTooLargeException.isCausedBy(ex)) {
+            return payloadTooLarge();
+        }
         if (isClientAbort(ex)) {
             log.debug("Client aborted the connection: {}", ex.getClass().getSimpleName());
             return null; // the HttpServletResponse parameter marks the request as handled

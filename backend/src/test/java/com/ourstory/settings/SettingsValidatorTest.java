@@ -29,7 +29,10 @@ class SettingsValidatorTest {
             validator.validate(changes);
         } catch (ApiException e) {
             assertThat(e.status().value()).isEqualTo(400);
-            return (Map<String, String>) e.properties().get("errors");
+            Map<String, String> byField = new LinkedHashMap<>();
+            ((java.util.List<Map<String, String>>) e.properties().get("errors"))
+                    .forEach(err -> byField.put(err.get("field"), err.get("message")));
+            return byField;
         }
         throw new AssertionError("expected a validation failure for " + body);
     }

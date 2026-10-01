@@ -55,20 +55,22 @@ response bodies or rejected input values. Extra members by case:
 
 | Case | Status | Extra members |
 |---|---|---|
-| Bean validation on world/moment/letter bodies | 400 `validation-failed` | `errors: [{"field":"slug","message":"must be kebab-case (a-z, 0-9, hyphens)"}]` (an ARRAY) |
-| Settings validation (`PUT /api/admin/settings`) | 400 `validation-failed` | `errors: {"appTitle":"Must be at most 100 characters"}` (an OBJECT keyed by field name) |
+| ANY validation failure: bean validation, malformed or mistyped JSON, settings, blank unlock answer | 400 `validation-failed` | `errors: [{"field":"slug","message":"must be kebab-case (a-z, 0-9, hyphens)"}]` (always an ARRAY; `field` is a JSON path such as `moments[0].caption`, or `body` when the whole body is unreadable; rejected values are never echoed) |
+| Destructive call not confirmed (`DELETE /api/admin/worlds/{id}` without `?confirm=true`) | 400 `confirmation-required` | `momentCount` |
+| Request body too large (auth 4096 bytes, admin 1 MiB, counted as read, chunked included) | 413 `payload-too-large` | none |
 | Malformed id or slug in a path, bad query | 400 `invalid-request` | none |
 | Unknown or hidden resource | 404 `not-found` | none |
 | Duplicate world slug | 409 `slug-conflict` | none |
 | Google must be (re)connected | 409 `google-reconnect-required` | `authorizeUrl` |
 | Semantic problems (bad order list, unknown media, duplicate media, too many moments, unknown letter world) | 422 `invalid-order`, `unknown-media`, `duplicate-media`, `too-many-moments`, `unknown-world` | moments: `missingMediaIds` for `unknown-media` |
+| The world or photos changed while saving moments | 409 `moments-conflict` | none |
 | Unlock wrong answer | 401 `unlock-failed` | `attemptsRemaining` |
 | Unlock rate limited | 429 `too-many-attempts` | `retryAfterSeconds` (and `Retry-After` header) |
 | Unlock not configured | 503 `unlock-not-configured` | none |
 | Google upstream failure | 502 `google-api-error` | none |
 | Anything unexpected | 500 | none |
 
-Note the two shapes of `errors` above; handle both.
+There is exactly one shape of `errors` (the array); settings used to return an object, that is gone.
 
 ### 1.4 Ids and caching
 
@@ -96,24 +98,29 @@ Requires CSRF. Body `{"answer":"Sample"}` (1 to 100 characters; whole body at mo
 |---|---|
 | `204` | Correct. `Set-Cookie: os_viewer=...` |
 | `401` | Wrong. `{"type":"urn:ourstory:problem:unlock-failed",...,"attemptsRemaining":3}`. The answer is never echoed |
-| `400` | Empty, too long or malformed body |
+| `400` | Validation problem with `errors:[{field,message}]` (blank answer, over 100 characters, malformed body) |
 | `403` | Missing CSRF token |
-| `413` | Body over 4096 bytes |
+| `413` | Body over 4096 bytes actually read (chunked uploads included); `application/problem+json` |
 | `429` | Rate limited. `Retry-After: <seconds>` and `retryAfterSeconds` |
 | `503` | Unlock not configured |
 
 Answers are compared after normalisation (Unicode NFKC, lower-case, all whitespace removed): ` sAmPlE ` equals `Sample`.
 
-Rate limiting (in memory): 5 FAILED attempts per client IP and 60 failed attempts overall within a sliding 10
-minutes, then `429`. Successful unlocks are not counted. Limits are checked before any hashing.
+Rate limiting (in memory): 5 FAILED attempts per client (IPv4 exact, IPv6 per `/64`) within a sliding 10 minutes and
+30 failed attempts overall within a sliding HOUR, then `429` with `Retry-After`. Successful unlocks are not counted.
+Limits are checked before any hashing. The global cap fails closed: while it is reached nobody can unlock until the
+window slides or the admin calls `POST /api/admin/auth/reset-rate-limits` (section 4.7). Answers shorter than 4
+characters can never be stored, but any 1 to 100 character attempt is accepted for comparison.
 
 ### 2.3.1 The `os_viewer` cookie
 `HttpOnly`, `SameSite=Lax`, `Path=/`, `Secure` (except in the `dev` profile so plain `http://localhost` works),
-30 days. Opaque to the client. It stops working immediately when the admin changes the question/answers or uses
-"sign out everyone". The client never reads it; use `GET /api/auth/status` instead.
+7 days (`Max-Age` equals the signed expiry). Opaque to the client. It stops working immediately when the admin
+changes the question/answers to different values or uses "sign out everyone". The client never reads it; use
+`GET /api/auth/status` instead.
 
 ### 2.4 `POST /api/auth/lock`
-Requires CSRF. `204` and the cookie is cleared (`Max-Age=0`).
+Requires CSRF. `204` and the browser's cookie is cleared (`Max-Age=0`). This only clears THIS browser: the cookie
+itself is not revoked server-side (a copy would still work until it expires or the admin signs everyone out).
 
 ---
 
@@ -254,7 +261,7 @@ Use `<img src="/api/media/{id}/thumb">` (cookie authenticated). Use `lqip` as th
 ### 4.3 Media
 - `GET /api/admin/media?page=0&size=50` (`size` 1..100, else 400) ->
   `{"items":[{"id","filename","mimeType","width","height","takenAt","lqip","dominantColor","importedAt"}],"page","size","total"}`, newest first. (`unassigned=true` is accepted but ignored.)
-- `DELETE /api/admin/media/{id}` -> `204` (row and files; its moments go with it; a cover is cleared). `404` unknown.
+- `DELETE /api/admin/media/{id}` -> `204` (row and files; its moments go with it; a cover is cleared; the id is also removed from the `heroMediaIds` setting). `404` unknown.
 
 ### 4.4 Worlds
 World object (`WorldResponse`): `id, slug, title, subtitle, tagline, layout, coverMediaId, themeAccent, sortOrder, unlockAt, introText, outroText, musicUrl, published, momentCount, createdAt, updatedAt`.
@@ -264,11 +271,22 @@ World object (`WorldResponse`): `id, slug, title, subtitle, tagline, layout, cov
 - `POST /api/admin/worlds` -> `201` + `Location`, appended last. Body (`WorldRequest`):
   `{"slug","title","subtitle","tagline","layout","coverMediaId","themeAccent","unlockAt","introText","outroText","musicUrl","published"}`.
   Required: `slug` (kebab, <=64), `title` (<=120), `layout`. `subtitle/tagline` <=200, `introText/outroText` <=2000,
-  `themeAccent` `#rrggbb`, `musicUrl` https <=500, `unlockAt` ISO instant or `null` (open), `published` defaults to true.
+  `themeAccent` `#rrggbb`, `musicUrl` https <=500 (no userinfo `user@`, spaces, quotes, `<`, `>`, backslashes or control
+  characters), `unlockAt` ISO instant or `null` (open), `published` defaults to true on create.
   `409` duplicate slug; `422 unknown-media` for a missing cover.
-- `PUT /api/admin/worlds/{id}` -> full update (same body; sort order unchanged).
-- `DELETE /api/admin/worlds/{id}` -> `204`; cascades moments and letters.
-- `PUT /api/admin/worlds/reorder` body `{"orderedIds":[...]}` (every world id exactly once, else `422 invalid-order`) -> new list.
+- `PUT /api/admin/worlds/{id}` -> update (same body; sort order unchanged). Presence matters for two fields:
+
+  | Field | Omitted | Explicit `null` | Value |
+  |---|---|---|---|
+  | `published` | keeps the stored value | same as omitted (keeps) | sets it |
+  | `unlockAt` | keeps the stored value | CLEARS it (always open) | sets it |
+
+  Every other field is replaced by what is sent (omitted = cleared). `404` when the world does not exist.
+- `DELETE /api/admin/worlds/{id}?confirm=true` -> `204`. Removes the world and its moments; its letters are KEPT with
+  `worldId: null` (and are not shown to viewers). Without `confirm=true`: `400 confirmation-required`
+  (`momentCount`, and a `detail` saying moments will be removed and letters kept). Unknown id `404`.
+- `PUT /api/admin/worlds/reorder` body `{"orderedIds":[...]}`: elements must be non-blank ULIDs (null, blank or
+  malformed -> `400` validation problem), every world id exactly once (else `422 invalid-order`) -> new list.
   (Declared before `/{id}` so `reorder` is never read as an id.)
 
 ### 4.5 Moments
@@ -280,13 +298,14 @@ World object (`WorldResponse`): `id, slug, title, subtitle, tagline, layout, cov
 ### 4.6 Letters
 Letter: `{id, worldId (nullable), title (<=160), body (<=20000, raw markdown), revealTrigger, sortOrder, createdAt}`.
 - `GET /api/admin/letters?worldId=<id>` (filter optional), `POST` (`201` + `Location`), `PUT /{id}`, `DELETE /{id}` (`204`).
-  Request body: `{"worldId","title","body","revealTrigger","sortOrder"}` (`worldId` and `sortOrder` optional; unknown world `422 unknown-world`).
+  Request body: `{"worldId","title","body","revealTrigger","sortOrder"}` (`worldId` and `sortOrder` optional; unknown world `422 unknown-world`; `PUT` of an unknown letter `404`).
   Letters without a `worldId` exist in the admin API but are not returned by the viewer API.
 
 ### 4.7 Settings
 - `GET /api/admin/settings` -> `{"appTitle","tagline","defaultTheme","specialDate","herName","myName","easterEggNicknames":[],"heroMediaIds":[],"unlockQuestion","unlockAnswersConfigured":2}`. Answers and hashes are never returned.
-- `PUT /api/admin/settings` partial update of any of `appTitle, tagline, defaultTheme ("rose"|"cinema"), specialDate (YYYY-MM-DD), herName, myName, easterEggNicknames (<=10), heroMediaIds (<=10 ULIDs), unlockQuestion`, plus write-only `unlockAnswers` (1 to 10 strings; replaces all). Returns the same view as GET. Changing the question or answers signs every viewer out. Unknown keys and invalid values: `400` with `errors` object.
-- `POST /api/admin/settings/sign-out-everyone` -> `204`.
+- `PUT /api/admin/settings` partial update of any of `appTitle, tagline, defaultTheme ("rose"|"cinema"), specialDate (YYYY-MM-DD), herName, myName, easterEggNicknames (<=10), heroMediaIds (<=10 ULIDs), unlockQuestion`, plus write-only `unlockAnswers` (1 to 10 strings; replaces all). Returns the same view as GET. Changing the question or answers to DIFFERENT values signs every viewer out; sending the same ones again changes nothing. `unlockAnswers` entries need at least 4 characters once case and spaces are ignored (max 100). `heroMediaIds` must be unique ids of existing photos. Unknown keys and invalid values: `400` with the `errors` array (`field` is the setting name).
+- `POST /api/admin/settings/sign-out-everyone` -> `204`; every viewer cookie stops working (this is the revoke).
+- `POST /api/admin/auth/reset-rate-limits` -> `204`. Clears the per-client and global unlock failure counters (use after a lockout; otherwise it clears when the window slides).
 
 ---
 

@@ -12,9 +12,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
- * In-memory sliding-window limiter for FAILED unlock attempts: N per client IP and a global cap, both over
- * the same window. An attempt is reserved BEFORE the expensive hash check (so parallel requests cannot all
- * slip through) and released again when it turns out to be a success. Memory is bounded by Caffeine.
+ * In-memory sliding-window limiter for FAILED unlock attempts: N per client key (IPv4 exact, IPv6 /64) within
+ * one window, and a global cap within a longer window. An attempt is reserved BEFORE the expensive hash check
+ * (so parallel requests cannot all slip through) and released again when it turns out to be a success.
+ * Memory is bounded by Caffeine. When a limit trips, ONE warning is logged per trip (not per refused request).
+ * It fails closed: while the global cap is reached nobody can unlock until the window slides or an admin calls
+ * {@link #reset()}.
  */
 @Component
 public class UnlockRateLimiter {
@@ -25,13 +28,50 @@ public class UnlockRateLimiter {
     public record Attempt(boolean allowed, Duration retryAfter, long stamp) {
     }
 
+    /** Failure timestamps within one sliding window, plus whether the current trip was already logged. */
+    private static final class Window {
+        private final Deque<Long> stamps = new ArrayDeque<>();
+        private final int limit;
+        private final long windowMillis;
+        private boolean tripLogged;
+
+        Window(int limit, long windowMillis) {
+            this.limit = limit;
+            this.windowMillis = windowMillis;
+        }
+
+        void prune(long now) {
+            while (!stamps.isEmpty() && stamps.peekFirst() <= now - windowMillis) {
+                stamps.removeFirst();
+            }
+            if (stamps.size() < limit) {
+                tripLogged = false;
+            }
+        }
+
+        /** Milliseconds until the oldest counted failure leaves the window; 0 when under the limit. */
+        long waitFor(long now) {
+            return stamps.size() < limit ? 0 : Math.max(1, stamps.peekFirst() + windowMillis - now);
+        }
+
+        int remaining() {
+            return Math.max(0, limit - stamps.size());
+        }
+
+        /** True exactly once per trip. */
+        boolean markTripLogged() {
+            boolean first = !tripLogged;
+            tripLogged = true;
+            return first;
+        }
+    }
+
     private final Object lock = new Object();
-    private final Cache<String, Deque<Long>> perIp;
-    private final Deque<Long> global = new ArrayDeque<>();
+    private final Cache<String, Window> perKey;
+    private final Window global;
     private final Clock clock;
     private final long windowMillis;
     private final int maxPerIp;
-    private final int maxGlobal;
 
     @Autowired
     public UnlockRateLimiter(ViewerProperties props, ObjectProvider<Clock> clock) {
@@ -42,8 +82,8 @@ public class UnlockRateLimiter {
         this.clock = clock;
         this.windowMillis = props.failureWindow().toMillis();
         this.maxPerIp = props.maxFailuresPerIp();
-        this.maxGlobal = props.maxFailuresGlobal();
-        this.perIp = Caffeine.newBuilder()
+        this.global = new Window(props.maxFailuresGlobal(), props.globalFailureWindow().toMillis());
+        this.perKey = Caffeine.newBuilder()
                 .maximumSize(MAX_TRACKED_IPS)
                 .expireAfterAccess(props.failureWindow())
                 .ticker(() -> TimeUnit.MILLISECONDS.toNanos(clock.millis()))
@@ -51,17 +91,19 @@ public class UnlockRateLimiter {
     }
 
     public Attempt tryAcquire(String ip) {
+        String key = ClientIps.limiterKey(ip);
         synchronized (lock) {
             long now = clock.millis();
-            Deque<Long> mine = perIp.get(ip, key -> new ArrayDeque<>());
-            prune(mine, now);
-            prune(global, now);
-            long wait = Math.max(waitFor(mine, maxPerIp, now), waitFor(global, maxGlobal, now));
+            Window mine = window(key);
+            mine.prune(now);
+            global.prune(now);
+            long wait = Math.max(mine.waitFor(now), global.waitFor(now));
             if (wait > 0) {
+                logTrip(mine, ip, now);
                 return new Attempt(false, Duration.ofSeconds(Math.max(1, (wait + 999) / 1000)), 0);
             }
-            mine.addLast(now);
-            global.addLast(now);
+            mine.stamps.addLast(now);
+            global.stamps.addLast(now);
             return new Attempt(true, Duration.ZERO, now);
         }
     }
@@ -69,11 +111,11 @@ public class UnlockRateLimiter {
     /** A reserved attempt turned out to be a success: it must not count as a failure. */
     public void release(String ip, Attempt attempt) {
         synchronized (lock) {
-            Deque<Long> mine = perIp.getIfPresent(ip);
+            Window mine = perKey.getIfPresent(ClientIps.limiterKey(ip));
             if (mine != null) {
-                mine.removeFirstOccurrence(attempt.stamp());
+                mine.stamps.removeFirstOccurrence(attempt.stamp());
             }
-            global.removeFirstOccurrence(attempt.stamp());
+            global.stamps.removeFirstOccurrence(attempt.stamp());
         }
     }
 
@@ -81,24 +123,33 @@ public class UnlockRateLimiter {
     public int remaining(String ip) {
         synchronized (lock) {
             long now = clock.millis();
-            Deque<Long> mine = perIp.get(ip, key -> new ArrayDeque<>());
-            prune(mine, now);
-            prune(global, now);
-            return Math.max(0, Math.min(maxPerIp - mine.size(), maxGlobal - global.size()));
+            Window mine = window(ClientIps.limiterKey(ip));
+            mine.prune(now);
+            global.prune(now);
+            return Math.min(mine.remaining(), global.remaining());
         }
     }
 
-    private void prune(Deque<Long> stamps, long now) {
-        while (!stamps.isEmpty() && stamps.peekFirst() <= now - windowMillis) {
-            stamps.removeFirst();
+    /** Admin recovery: forgets every counted failure (per client and global). */
+    public void reset() {
+        synchronized (lock) {
+            perKey.invalidateAll();
+            global.stamps.clear();
+            global.tripLogged = false;
         }
     }
 
-    /** Milliseconds until the oldest counted failure leaves the window; 0 when under the limit. */
-    private long waitFor(Deque<Long> stamps, int limit, long now) {
-        if (stamps.size() < limit) {
-            return 0;
+    private Window window(String key) {
+        return perKey.get(key, k -> new Window(maxPerIp, windowMillis));
+    }
+
+    private void logTrip(Window mine, String ip, long now) {
+        if (global.waitFor(now) > 0) {
+            if (global.markTripLogged()) {
+                SecurityAudit.limiterTripped("global", null);
+            }
+        } else if (mine.markTripLogged()) {
+            SecurityAudit.limiterTripped("client", ClientIps.mask(ip));
         }
-        return Math.max(1, stamps.peekFirst() + windowMillis - now);
     }
 }

@@ -22,6 +22,9 @@ class StartupFailureTest {
             boolean prod = args.contains("--spring.profiles.active=prod");
             args.remove("--spring.profiles.active=prod");
             args.add("--spring.profiles.active=" + (prod ? "test,prod" : "test"));
+            if (prod && args.stream().noneMatch(a -> a.startsWith("--ourstory.viewer.pbkdf2-iterations"))) {
+                args.add("--ourstory.viewer.pbkdf2-iterations=600000"); // prod refuses less
+            }
             return new SpringApplicationBuilder(OurStoryApplication.class).run(args.toArray(String[]::new));
         };
     }
@@ -67,6 +70,20 @@ class StartupFailureTest {
                 .hasMessageContaining("VIEWER_COOKIE_SECRET");
         assertThatThrownBy(() -> app("startup-fail-6", "spring.profiles.active=prod").run())
                 .rootCause().hasMessageContaining("VIEWER_COOKIE_SECRET");
+    }
+
+    @Test
+    void prodRefusesPlaceholderSecretsAndALowWorkFactor() {
+        for (String placeholder : new String[] {"change-me-change-me-change-me-change-me", "SECRET".repeat(8),
+                "password1234567890password1234567890", "changeme".repeat(5)}) {
+            assertThatThrownBy(() -> app("startup-fail-7", "spring.profiles.active=prod",
+                    "ourstory.viewer-cookie-secret=" + placeholder).run())
+                    .rootCause().isInstanceOf(ConfigurationProblemException.class)
+                    .hasMessageContaining("placeholder");
+        }
+        assertThatThrownBy(() -> app("startup-fail-8", "spring.profiles.active=prod",
+                "ourstory.viewer-cookie-secret=" + "k".repeat(40), "ourstory.viewer.pbkdf2-iterations=210000").run())
+                .rootCause().hasMessageContaining("at least 600000");
     }
 
     @Test

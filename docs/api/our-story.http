@@ -4,11 +4,11 @@
 # CSRF: every POST/PUT/DELETE needs the header X-XSRF-TOKEN equal to the XSRF-TOKEN cookie.
 #  1. Send "question" below (any GET sets the cookie; the client keeps its cookie jar automatically).
 #  2. Copy the cookie value into @xsrf (REST Client: see the response's Set-Cookie header).
-# Never commit real answers; put the unlock answer into your own local, uncommitted variable.
+# The answer below is a DUMMY. Never commit a real answer; change @answer locally and do not commit that edit.
 
 @baseUrl = http://localhost:8080
 @xsrf = PASTE-XSRF-TOKEN-COOKIE-VALUE
-@answer = PASTE-THE-ANSWER
+@answer = Sample
 @worldSlug = where-it-all-began
 
 ### ---------------- Viewer flow ----------------
@@ -109,13 +109,19 @@ Content-Type: application/json
   "published": false
 }
 
-### Update a world (full body)
+### Update a world. Omitted "published" and "unlockAt" KEEP the stored values; "unlockAt": null CLEARS it
+# (add "unlockAt": null below to make the world always open).
 PUT {{baseUrl}}/api/admin/worlds/PASTE-WORLD-ID
 Cookie: {{adminCookie}}; XSRF-TOKEN={{xsrf}}
 X-XSRF-TOKEN: {{xsrf}}
 Content-Type: application/json
 
 { "slug": "road-trips", "title": "Road Trips", "layout": "POSTCARDS", "published": true }
+
+### Delete a world: needs ?confirm=true (without it: 400 + moment count). Moments go, letters are kept.
+DELETE {{baseUrl}}/api/admin/worlds/PASTE-WORLD-ID?confirm=true
+Cookie: {{adminCookie}}; XSRF-TOKEN={{xsrf}}
+X-XSRF-TOKEN: {{xsrf}}
 
 ### Reorder worlds (every id exactly once)
 PUT {{baseUrl}}/api/admin/worlds/reorder
@@ -173,6 +179,13 @@ X-XSRF-TOKEN: {{xsrf}}
 Content-Type: application/json
 
 { "tagline": "Love you till eternity and back", "heroMediaIds": ["PASTE-MEDIA-ID"] }
+# Unlock answers (write-only, 4+ characters once spaces are ignored; same values again change nothing):
+# { "unlockQuestion": "Test question?", "unlockAnswers": ["Sample", "Other Answer"] }
+
+### Unlock lockout recovery: clears per-client and global unlock failure counters (204)
+POST {{baseUrl}}/api/admin/auth/reset-rate-limits
+Cookie: {{adminCookie}}; XSRF-TOKEN={{xsrf}}
+X-XSRF-TOKEN: {{xsrf}}
 
 ### Sign every viewer out
 POST {{baseUrl}}/api/admin/settings/sign-out-everyone

@@ -70,8 +70,8 @@ class ViewerFlowTest {
 
     @BeforeEach
     void freshWindow() {
-        // Every test starts with empty rate-limit windows and a stale epoch cache.
-        clock.advance(Duration.ofMinutes(11));
+        // Every test starts with empty rate-limit windows (the global one is an hour) and a stale epoch cache.
+        clock.advance(Duration.ofMinutes(61));
     }
 
     @AfterEach
@@ -135,7 +135,7 @@ class ViewerFlowTest {
         String header = result.getResponse().getHeaders("Set-Cookie").stream()
                 .filter(h -> h.startsWith("os_viewer=")).findFirst().orElseThrow();
         assertThat(header).contains("HttpOnly").contains("Secure").contains("SameSite=Lax").contains("Path=/")
-                .contains("Max-Age=2592000");
+                .contains("Max-Age=604800");
         assertThat(result.getRequest().getSession(false)).isNull();
         assertThat(result.getResponse().getCookie("JSESSIONID")).isNull();
     }
@@ -162,19 +162,28 @@ class ViewerFlowTest {
     }
 
     @Test
-    void invalidBodiesAre400AndNeverReachTheHasher() throws Exception {
+    void invalidBodiesAre400WithTheGlobalErrorsArrayAndNeverReachTheHasher() throws Exception {
         clearInvocations(hasher);
         for (String body : new String[] {"{}", "{\"answer\":\"\"}", "{\"answer\":\"   \"}", "not json",
                 "{\"answer\":\"" + "a".repeat(101) + "\"}", "{\"answer\":[\"x\"]}", "[]"}) {
-            mvc.perform(csrfPost(mvc, "/api/auth/unlock", "10.0.2.1", body)).andExpect(status().isBadRequest());
+            mvc.perform(csrfPost(mvc, "/api/auth/unlock", "10.0.2.1", body)).andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.type").value("urn:ourstory:problem:validation-failed"))
+                    .andExpect(jsonPath("$.errors").isArray())
+                    .andExpect(jsonPath("$.errors[0].field").isNotEmpty())
+                    .andExpect(jsonPath("$.errors[0].message").isNotEmpty());
         }
+        mvc.perform(csrfPost(mvc, "/api/auth/unlock", "10.0.2.1", "{\"answer\":\"   \"}"))
+                .andExpect(jsonPath("$.errors[0].field").value("answer"));
         verify(hasher, never()).matchesAny(any(), any());
     }
 
     @Test
-    void oversizedBodiesAreRejectedEarly() throws Exception {
+    void oversizedBodiesAreRejectedEarlyWithAProblemBody() throws Exception {
         mvc.perform(csrfPost(mvc, "/api/auth/unlock", "10.0.2.2", "{\"answer\":\"" + "a".repeat(5000) + "\"}"))
-                .andExpect(status().isPayloadTooLarge());
+                .andExpect(status().isPayloadTooLarge())
+                .andExpect(header().string("Content-Type", org.hamcrest.Matchers.startsWith("application/problem+json")))
+                .andExpect(jsonPath("$.type").value("urn:ourstory:problem:payload-too-large"))
+                .andExpect(jsonPath("$.status").value(413));
     }
 
     // --- rate limiting -------------------------------------------------------------------------------------
@@ -208,8 +217,8 @@ class ViewerFlowTest {
     }
 
     @Test
-    void globalCapBlocksEveryoneUntilTheWindowSlides() throws Exception {
-        for (int ip = 0; ip < 12; ip++) {
+    void globalCapOf30PerHourBlocksEveryoneUntilTheHourSlides() throws Exception {
+        for (int ip = 0; ip < 6; ip++) {
             for (int i = 0; i < 5; i++) {
                 mvc.perform(csrfPost(mvc, "/api/auth/unlock", "10.1." + ip + ".1", unlockBody("bad")))
                         .andExpect(status().isUnauthorized());
@@ -217,11 +226,95 @@ class ViewerFlowTest {
         }
         clearInvocations(hasher);
         mvc.perform(csrfPost(mvc, "/api/auth/unlock", "10.1.99.1", unlockBody(ANSWER)))
-                .andExpect(status().isTooManyRequests()).andExpect(header().exists("Retry-After"));
+                .andExpect(status().isTooManyRequests()).andExpect(header().exists("Retry-After"))
+                .andExpect(jsonPath("$.type").value("urn:ourstory:problem:too-many-attempts"));
         verify(hasher, never()).matchesAny(any(), any());
-        clock.advance(Duration.ofMinutes(10));
+        clock.advance(Duration.ofMinutes(11)); // per-client windows are over, the global hour is not
+        mvc.perform(csrfPost(mvc, "/api/auth/unlock", "10.1.99.1", unlockBody(ANSWER)))
+                .andExpect(status().isTooManyRequests());
+        clock.advance(Duration.ofMinutes(50));
         mvc.perform(csrfPost(mvc, "/api/auth/unlock", "10.1.99.1", unlockBody(ANSWER)))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void adminResetClearsALockoutImmediately() throws Exception {
+        for (int ip = 0; ip < 6; ip++) {
+            for (int i = 0; i < 5; i++) {
+                mvc.perform(csrfPost(mvc, "/api/auth/unlock", "10.8." + ip + ".1", unlockBody("bad")));
+            }
+        }
+        mvc.perform(csrfPost(mvc, "/api/auth/unlock", "10.8.99.1", unlockBody(ANSWER)))
+                .andExpect(status().isTooManyRequests());
+        // Not allowed for anonymous callers, viewers, or without CSRF.
+        mvc.perform(csrfPost(mvc, "/api/admin/auth/reset-rate-limits", "10.8.99.1", null))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/admin/auth/reset-rate-limits").with(admin())).andExpect(status().isForbidden());
+        mvc.perform(csrfPost(mvc, "/api/admin/auth/reset-rate-limits", "10.8.99.1", null).with(admin()))
+                .andExpect(status().isNoContent());
+        mvc.perform(csrfPost(mvc, "/api/auth/unlock", "10.8.99.1", unlockBody(ANSWER)))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void aForgedXForwardedForNeverChangesTheLimiterKey() throws Exception {
+        // One TCP peer sending many different forged X-Forwarded-For values still hits ONE bucket.
+        for (int i = 0; i < 5; i++) {
+            mvc.perform(csrfPost(mvc, "/api/auth/unlock", "10.9.0.1", unlockBody("bad" + i))
+                    .header("X-Forwarded-For", "203.0.113." + i)
+                    .header("Forwarded", "for=198.51.100." + i)
+                    .header("X-Real-IP", "192.0.2." + i)).andExpect(status().isUnauthorized());
+        }
+        mvc.perform(csrfPost(mvc, "/api/auth/unlock", "10.9.0.1", unlockBody("bad"))
+                .header("X-Forwarded-For", "203.0.113.200")).andExpect(status().isTooManyRequests());
+    }
+
+    @Test
+    void ipv6PeersOfOneSlash64ShareTheBucket() throws Exception {
+        for (int i = 0; i < 5; i++) {
+            mvc.perform(csrfPost(mvc, "/api/auth/unlock", "2001:db8:55:66:" + i + "::" + i, unlockBody("bad")))
+                    .andExpect(status().isUnauthorized());
+        }
+        mvc.perform(csrfPost(mvc, "/api/auth/unlock", "2001:db8:55:66:abcd::1", unlockBody("bad")))
+                .andExpect(status().isTooManyRequests());
+    }
+
+    @Test
+    void securityEventsAreLoggedMaskedAndNeverContainAnswersOrCookies() throws Exception {
+        ch.qos.logback.classic.Logger audit =
+                (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(SecurityAudit.LOGGER);
+        ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent> appender =
+                new ch.qos.logback.core.read.ListAppender<>();
+        appender.start();
+        audit.addAppender(appender);
+        try {
+            mvc.perform(csrfPost(mvc, "/api/auth/unlock", "198.51.100.23", unlockBody("WrongSecretXyz")));
+            Cookie cookie = unlockedCookie(mvc, "198.51.100.23");
+            for (int i = 0; i < 6; i++) {
+                mvc.perform(csrfPost(mvc, "/api/auth/unlock", "198.51.100.24", unlockBody("nope" + i)));
+            }
+            String all = appender.list.stream().map(e -> e.getLevel() + " " + e.getFormattedMessage())
+                    .collect(java.util.stream.Collectors.joining("\n"));
+            assertThat(all).contains("unlock failed").contains("unlock succeeded").contains("scope=client")
+                    .contains("198.51.*.*");
+            assertThat(all).doesNotContain("WrongSecretXyz").doesNotContain("nope").doesNotContain(ANSWER)
+                    .doesNotContain(cookie.getValue()).doesNotContain(ViewerTestSupport.SECRET)
+                    .doesNotContain("100.23").doesNotContain("pbkdf2");
+        } finally {
+            audit.detachAppender(appender);
+        }
+    }
+
+    @Test
+    void cookieMaxAgeEqualsItsExpiry() throws Exception {
+        MvcResult result = mvc.perform(csrfPost(mvc, "/api/auth/unlock", "10.9.1.1", unlockBody(ANSWER)))
+                .andExpect(status().isNoContent()).andReturn();
+        Cookie cookie = result.getResponse().getCookie(ViewerCookies.NAME);
+        String payload = new String(java.util.Base64.getUrlDecoder().decode(cookie.getValue().split("\\.")[0]),
+                StandardCharsets.UTF_8);
+        long iat = Long.parseLong(payload.replaceAll(".*\"iat\":(\\d+).*", "$1"));
+        long exp = Long.parseLong(payload.replaceAll(".*\"exp\":(\\d+).*", "$1"));
+        assertThat(cookie.getMaxAge()).isEqualTo(7 * 24 * 3600).isEqualTo((int) (exp - iat));
     }
 
     // --- access matrix ---------------------------------------------------------------------------------------
@@ -291,7 +384,7 @@ class ViewerFlowTest {
         mvc.perform(get(path).cookie(new Cookie(ViewerCookies.NAME, "x".repeat(100_000))))
                 .andExpect(status().isUnauthorized());
         mvc.perform(get(path).cookie(viewer)).andExpect(status().isOk());
-        clock.advance(Duration.ofDays(30).plusSeconds(1));
+        clock.advance(Duration.ofDays(7).plusSeconds(1));
         mvc.perform(get(path).cookie(viewer)).andExpect(status().isUnauthorized());
     }
 

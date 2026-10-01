@@ -96,4 +96,23 @@ class StartupConfigValidatorTest {
         assertThat(cause.problems()).hasSize(2);
         assertThat(TestSupport.props("d", "a@b.c", List.of("x"), 1024, 1).devTools().enabled()).isFalse();
     }
+
+    @Test
+    void placeholderSecretsAreRecognisedButRealOnesAreNot() {
+        for (String placeholder : new String[] {"change-me", "CHANGE_ME_123", "changeme", "secret", "Password",
+                "password-password", "secret1234", "change-me-secret-password"}) {
+            assertThat(StartupConfigValidator.isPlaceholder(placeholder)).as(placeholder).isTrue();
+        }
+        for (String real : new String[] {"Zk3Qv9Lm2Xr7Ty4Wp8Hc1Nb6Jd5Fg0Sa", "x".repeat(40), "1234567890".repeat(4),
+                "my-own-long-passphrase-for-viewer-cookies", "yoursecret-but-with-more-words-after"}) {
+            assertThat(StartupConfigValidator.isPlaceholder(real)).as(real).isFalse();
+        }
+    }
+
+    @Test
+    void prodRefusesAPlaceholderSecretEvenWhenLongEnough() {
+        assertThatThrownBy(() -> new StartupConfigValidator.Prod(props("", "", "", "https://p.example", false,
+                List.of("x"), "change-me".repeat(5))))
+                .isInstanceOf(ConfigurationProblemException.class).hasMessageContaining("placeholder");
+    }
 }

@@ -46,8 +46,11 @@ public class UnlockService {
         }
         if (hasher.matchesAny(normalized, hashes)) {
             limiter.release(clientIp, attempt);
+            SecurityAudit.unlockSucceeded(clientIp);
             return new Outcome.Success();
         }
-        return new Outcome.Failure(limiter.remaining(clientIp));
+        int remaining = limiter.remaining(clientIp);
+        SecurityAudit.unlockFailed(clientIp, remaining);
+        return new Outcome.Failure(remaining);
     }
 }

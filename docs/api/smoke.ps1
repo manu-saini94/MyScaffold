@@ -3,7 +3,7 @@
   End-to-end smoke test of the viewer flow against a RUNNING Our Story backend.
 
 .DESCRIPTION
-  question -> unlock without CSRF (403) -> unlock with CSRF (204 + cookie) -> status -> experience (6 worlds,
+  question -> unlock without CSRF (403) -> blank answer (400 errors array) -> oversize body (413) -> unlock with CSRF (204 + cookie) -> status -> experience (6 worlds,
   Our Forever locked and teaser only) -> world detail (open, locked teaser, unknown 404) -> lock -> experience (401).
   Exits non-zero on the first mismatch. Never prints the answer or any cookie value.
 
@@ -12,7 +12,7 @@
   Assumes "now" is before 2027-02-14T00:00:00+05:30, when Our Forever is still locked.
 
 .EXAMPLE
-  ./smoke.ps1 -Answer 'the-answer' -BaseUrl http://localhost:8080
+  ./smoke.ps1 -Answer 'Sample' -BaseUrl http://localhost:8080
 #>
 param(
     [Parameter(Mandatory = $true)][string]$Answer,
@@ -37,7 +37,12 @@ function Send-Request {
     } catch {
         $resp = $_.Exception.Response
         if ($null -eq $resp) { throw }
-        return [pscustomobject]@{ Status = [int]$resp.StatusCode; Content = ''; Headers = @{} }
+        $text = ''
+        try {
+            $reader = New-Object System.IO.StreamReader($resp.GetResponseStream())
+            $text = $reader.ReadToEnd()
+        } catch { $text = '' }
+        return [pscustomobject]@{ Status = [int]$resp.StatusCode; Content = $text; Headers = @{} }
     }
 }
 
@@ -75,6 +80,17 @@ $answerBody = (@{ answer = $Answer } | ConvertTo-Json -Compress)
 # 2. unlock without the CSRF header must be refused
 $noCsrf = Send-Request POST '/api/auth/unlock' @{} $answerBody
 Test-Check 'POST /api/auth/unlock without CSRF -> 403' ($noCsrf.Status -eq 403) "(got $($noCsrf.Status))"
+
+# 2b. a blank answer is a 400 validation problem with the single errors-array shape
+$blank = Send-Request POST '/api/auth/unlock' @{ 'X-XSRF-TOKEN' = (Get-XsrfToken) } '{"answer":"   "}'
+Test-Check 'POST /api/auth/unlock blank answer -> 400' ($blank.Status -eq 400) "(got $($blank.Status))"
+$blankBody = $blank.Content | ConvertFrom-Json
+Test-Check 'validation problem has errors[{field,message}]' ($blankBody.type -eq 'urn:ourstory:problem:validation-failed' -and @($blankBody.errors).Count -ge 1 -and $blankBody.errors[0].field -eq 'answer')
+
+# 2c. a body over 4096 bytes is a 413 problem (does not count as a failed attempt)
+$huge = (@{ answer = ('a' * 5000) } | ConvertTo-Json -Compress)
+$tooLarge = Send-Request POST '/api/auth/unlock' @{ 'X-XSRF-TOKEN' = (Get-XsrfToken) } $huge
+Test-Check 'POST /api/auth/unlock oversize body -> 413' ($tooLarge.Status -eq 413) "(got $($tooLarge.Status))"
 
 # 3. unlock with CSRF
 $unlock = Send-Request POST '/api/auth/unlock' @{ 'X-XSRF-TOKEN' = (Get-XsrfToken) } $answerBody

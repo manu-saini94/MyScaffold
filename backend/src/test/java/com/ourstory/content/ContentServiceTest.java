@@ -25,10 +25,18 @@ class ContentServiceTest extends ContentTestBase {
     @Autowired WorldService worldService;
     @Autowired MomentService momentService;
     @Autowired LetterService letterService;
+    @Autowired java.time.Clock clock;
+    @org.springframework.test.context.bean.override.mockito.MockitoSpyBean WorldRepository spyWorlds;
+    @org.springframework.test.context.bean.override.mockito.MockitoSpyBean LetterRepository spyLetters;
+    @org.springframework.test.context.bean.override.mockito.MockitoSpyBean MomentRepository spyMoments;
 
     private static WorldRequest req(String slug) {
         return new WorldRequest(slug, "  A Title  ", "  ", "tag", WorldLayout.MEMORY_WALL, null, "#aabbcc",
-                Instant.parse("2027-02-14T00:00:00Z"), "intro", null, "https://music.test/a.mp3", null);
+                at("2027-02-14T00:00:00Z"), "intro", null, "https://music.test/a.mp3", null);
+    }
+
+    private static Presence<Instant> at(String instant) {
+        return new Presence<>(Instant.parse(instant));
     }
 
     private static MomentInput input(String mediaId) {
@@ -88,7 +96,7 @@ class ContentServiceTest extends ContentTestBase {
         assertThat(updated.layout()).isEqualTo(WorldLayout.MEMORY_WALL);
         assertApi(() -> worldService.update(ulids.next(), req("zzz")), HttpStatus.NOT_FOUND, "not-found");
         assertApi(() -> worldService.get(ulids.next()), HttpStatus.NOT_FOUND, "not-found");
-        assertApi(() -> worldService.delete(ulids.next()), HttpStatus.NOT_FOUND, "not-found");
+        assertApi(() -> worldService.delete(ulids.next(), true), HttpStatus.NOT_FOUND, "not-found");
     }
 
     @Test
@@ -104,13 +112,93 @@ class ContentServiceTest extends ContentTestBase {
     }
 
     @Test
-    void deleteCascadesToMomentsAndLetters() {
+    void deleteRemovesMomentsButKeepsLettersWithoutAWorld() {
         WorldResponse w = worldService.create(req("doomed"));
         momentService.replace(w.id(), new MomentsRequest(List.of(input(seedMedia()))));
-        letterService.create(new LetterRequest(w.id(), "t", "b", RevealTrigger.WORLD_OUTRO, null));
-        worldService.delete(w.id());
+        LetterResponse letter = letterService.create(
+                new LetterRequest(w.id(), "t", "b", RevealTrigger.WORLD_OUTRO, null));
+        worldService.delete(w.id(), true);
         assertThat(letterService.list(w.id())).isEmpty();
+        assertThat(letterService.list(null)).extracting(LetterResponse::id).contains(letter.id());
+        assertThat(letterService.list(null)).filteredOn(l -> l.id().equals(letter.id()))
+                .extracting(LetterResponse::worldId).containsOnlyNulls();
         assertThat(jdbc.sql("SELECT COUNT(*) FROM moment").query(Long.class).single()).isZero();
+    }
+
+    @Test
+    void deleteWithoutConfirmationIs400AndChangesNothing() {
+        WorldResponse w = worldService.create(req("unconfirmed"));
+        momentService.replace(w.id(), new MomentsRequest(List.of(input(seedMedia()), input(seedMedia()))));
+        assertThatThrownBy(() -> worldService.delete(w.id(), false)).isInstanceOfSatisfying(ApiException.class, e -> {
+            assertThat(e.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+            assertThat(e.code()).isEqualTo("confirmation-required");
+            assertThat(e.properties()).containsEntry("momentCount", 2);
+            assertThat(e.getMessage()).contains("2 moment(s)").contains("letters are kept");
+        });
+        assertThat(worldService.get(w.id()).momentCount()).isEqualTo(2);
+    }
+
+    @Test
+    void updateKeepsOmittedPublishedAndUnlockAtAndClearsOnExplicitNull() {
+        Instant first = Instant.parse("2027-02-14T00:00:00Z");
+        Instant second = Instant.parse("2028-01-01T00:00:00Z");
+        WorldResponse w = worldService.create(new WorldRequest("tri-state", "T", null, null, WorldLayout.POSTCARDS,
+                null, null, at("2027-02-14T00:00:00Z"), null, null, null, false));
+        assertThat(w.published()).isFalse();
+        // omitted published and omitted unlockAt keep what is stored
+        WorldResponse kept = worldService.update(w.id(), new WorldRequest("tri-state", "T2", null, null,
+                WorldLayout.POSTCARDS, null, null, null, null, null, null, null));
+        assertThat(kept.published()).isFalse();
+        assertThat(kept.unlockAt()).isEqualTo(first);
+        // explicit values replace
+        WorldResponse changed = worldService.update(w.id(), new WorldRequest("tri-state", "T2", null, null,
+                WorldLayout.POSTCARDS, null, null, new Presence<>(second), null, null, null, true));
+        assertThat(changed.published()).isTrue();
+        assertThat(changed.unlockAt()).isEqualTo(second);
+        // explicit null clears the unlock time but published (omitted) stays
+        WorldResponse cleared = worldService.update(w.id(), new WorldRequest("tri-state", "T2", null, null,
+                WorldLayout.POSTCARDS, null, null, new Presence<>(null), null, null, null, null));
+        assertThat(cleared.unlockAt()).isNull();
+        assertThat(cleared.published()).isTrue();
+        // create: omitted published defaults to true, omitted unlockAt means open
+        WorldResponse created = worldService.create(new WorldRequest("tri-created", "T", null, null,
+                WorldLayout.POSTCARDS, null, null, null, null, null, null, null));
+        assertThat(created.published()).isTrue();
+        assertThat(created.unlockAt()).isNull();
+    }
+
+    @Test
+    void timestampsComeFromTheInjectedClock() {
+        Instant fixed = Instant.parse("2030-05-06T07:08:09.123Z");
+        java.time.Clock frozen = java.time.Clock.fixed(fixed, java.time.ZoneOffset.UTC);
+        WorldResponse created = new WorldService(worlds, moments, media, ulids, frozen).create(req("clocked"));
+        assertThat(created.createdAt()).isEqualTo(fixed);
+        assertThat(created.updatedAt()).isEqualTo(fixed);
+        LetterResponse letter = new LetterService(letters, worlds, ulids, frozen)
+                .create(new LetterRequest(null, "t", "b", RevealTrigger.SEALED_ICON, null));
+        assertThat(letter.createdAt()).isEqualTo(fixed);
+    }
+
+    @Test
+    void updatesReportNotFoundWhenTheRowVanishesBeforeTheWrite() {
+        WorldResponse w = worldService.create(req("racy"));
+        org.mockito.Mockito.doReturn(false).when(spyWorlds).update(org.mockito.ArgumentMatchers.any());
+        assertApi(() -> worldService.update(w.id(), req("racy")), HttpStatus.NOT_FOUND, "not-found");
+
+        LetterResponse l = letterService.create(new LetterRequest(null, "t", "b", RevealTrigger.SEALED_ICON, null));
+        org.mockito.Mockito.doReturn(false).when(spyLetters).update(org.mockito.ArgumentMatchers.any());
+        assertApi(() -> letterService.update(l.id(),
+                new LetterRequest(null, "t2", "b", RevealTrigger.SEALED_ICON, null)),
+                HttpStatus.NOT_FOUND, "not-found");
+    }
+
+    @Test
+    void aWriteRaceInReplaceMomentsBecomesA409NotA500() {
+        WorldResponse w = worldService.create(req("racing-moments"));
+        org.mockito.Mockito.doThrow(new org.springframework.dao.DataIntegrityViolationException("fk"))
+                .when(spyMoments).replaceAll(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+        assertApi(() -> momentService.replace(w.id(), new MomentsRequest(List.of(input(seedMedia())))),
+                HttpStatus.CONFLICT, "moments-conflict");
     }
 
     @Test

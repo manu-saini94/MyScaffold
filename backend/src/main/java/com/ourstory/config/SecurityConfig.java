@@ -3,10 +3,11 @@ package com.ourstory.config;
 import com.ourstory.auth.AdminAuthoritiesMapper;
 import com.ourstory.auth.AdminLoginHandlers;
 import com.ourstory.auth.AuthorizedClientCleaner;
-import com.ourstory.auth.AuthBodyLimitFilter;
 import com.ourstory.auth.ClientCleanupLogoutHandler;
 import com.ourstory.auth.ViewerAuthenticationFilter;
 import com.ourstory.auth.ViewerCookies;
+import com.ourstory.common.BodyLimitFilter;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -56,7 +57,8 @@ public class SecurityConfig {
             AdminAuthoritiesMapper authoritiesMapper,
             AuthorizedClientCleaner cleaner,
             OurStoryProperties props,
-            ViewerCookies viewerCookies) throws Exception {
+            ViewerCookies viewerCookies,
+            ObjectMapper mapper) throws Exception {
         http
             .authorizeHttpRequests(auth -> {
                 auth.requestMatchers(EndpointRequest.to(HealthEndpoint.class)).permitAll();
@@ -86,7 +88,7 @@ public class SecurityConfig {
                 .addLogoutHandler(new ClientCleanupLogoutHandler(cleaner))
                 .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler()))
             .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
-            .addFilterBefore(new AuthBodyLimitFilter(), CsrfFilter.class)
+            .addFilterBefore(new BodyLimitFilter(mapper), CsrfFilter.class)
             // After SessionManagementFilter so the stateless viewer login is never persisted to a session.
             .addFilterAfter(new ViewerAuthenticationFilter(viewerCookies), SessionManagementFilter.class);
 

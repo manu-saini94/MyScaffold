@@ -1,5 +1,6 @@
 package com.ourstory.content;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -15,7 +16,13 @@ public final class ContentDtos {
     static final String SLUG = "^[a-z0-9]+(-[a-z0-9]+)*$";
     static final String ULID = "^[0-7][0-9A-HJKMNP-TV-Z]{25}$";
     static final String ACCENT = "^#[0-9a-fA-F]{6}$";
-    static final String HTTPS_URL = "^https://[^\\s/?#]+[^\\s]*$";
+    /**
+     * https only. The authority (host[:port], up to the first of / ? #) is limited to host characters, so no
+     * userinfo ('@'), quotes, angle brackets, spaces or backslashes; nothing after it may contain those or
+     * control characters either.
+     */
+    static final String HTTPS_URL =
+            "^https://[A-Za-z0-9._:\\[\\]-]+(?:[/?#][^\\s<>\"'`\\\\\\x00-\\x1F\\x7F-\\x9F]*)?$";
     static final int MAX_MOMENTS = 500;
 
     private ContentDtos() {
@@ -30,11 +37,16 @@ public final class ContentDtos {
             @NotNull WorldLayout layout,
             @Pattern(regexp = ULID, message = "must be a media id") String coverMediaId,
             @Pattern(regexp = ACCENT, message = "must be a #rrggbb colour") String themeAccent,
-            Instant unlockAt,
+            @JsonDeserialize(using = Presence.Deserializer.class) Presence<Instant> unlockAt,
             @Size(max = 2000) String introText,
             @Size(max = 2000) String outroText,
             @Size(max = 500) @Pattern(regexp = HTTPS_URL, message = "must be an https URL") String musicUrl,
             Boolean published) {
+
+        /** unlockAt as sent, or {@code fallback} when the field was omitted (explicit null yields null). */
+        Instant unlockAtOr(Instant fallback) {
+            return Presence.orElse(unlockAt, fallback);
+        }
     }
 
     public record WorldResponse(String id, String slug, String title, String subtitle, String tagline,
@@ -49,7 +61,8 @@ public final class ContentDtos {
         }
     }
 
-    public record ReorderRequest(@NotNull List<String> orderedIds) {
+    public record ReorderRequest(
+            @NotNull List<@NotBlank @Pattern(regexp = ULID, message = "must be a world id") String> orderedIds) {
     }
 
     public record MomentInput(

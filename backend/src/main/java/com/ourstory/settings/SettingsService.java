@@ -89,7 +89,7 @@ public class SettingsService {
 
     /** Stored PBKDF2 hash strings (never answers). Empty when unlock is not configured. */
     public List<String> unlockAnswerHashes() {
-        return repository.find(SettingKeys.UNLOCK_ANSWER_HASHES).map(this::parseList).orElse(List.of());
+        return repository.find(SettingKeys.UNLOCK_ANSWER_HASHES).map(json -> parseList(SettingKeys.UNLOCK_ANSWER_HASHES, json)).orElse(List.of());
     }
 
     public boolean unlockConfigured() {
@@ -133,6 +133,18 @@ public class SettingsService {
         }
     }
 
+    /** Removes a deleted photo from the hero list. @return true when the list changed */
+    @Transactional
+    public boolean removeHeroMedia(String mediaId) {
+        List<String> current = heroMediaIds();
+        if (!current.contains(mediaId)) {
+            return false;
+        }
+        repository.upsert(SettingKeys.HERO_MEDIA_IDS,
+                toJson(current.stream().filter(id -> !id.equals(mediaId)).toList()), now());
+        return true;
+    }
+
     /** Invalidates every viewer cookie ever issued. @return the new epoch */
     @Transactional
     public long bumpViewerEpoch() {
@@ -153,14 +165,14 @@ public class SettingsService {
     }
 
     private List<String> list(String key) {
-        return parseList(required(key));
+        return parseList(key, required(key));
     }
 
-    private List<String> parseList(String json) {
+    private List<String> parseList(String key, String json) {
         try {
             return List.copyOf(mapper.readValue(json, STRING_LIST));
         } catch (JsonProcessingException | RuntimeException e) {
-            log.warn("A stored settings list is not valid JSON; treating it as empty");
+            log.warn("The stored settings list '{}' is not valid JSON; treating it as empty", key);
             return List.of();
         }
     }

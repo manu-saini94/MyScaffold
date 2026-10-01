@@ -22,7 +22,7 @@ public final class SettingKeys {
     public static final String UNLOCK_ANSWER_HASHES = "unlock_answer_hashes";
 
     /** Admin API name to storage key, for the non-secret settings an admin may edit directly. */
-    static final Map<String, String> EDITABLE = Map.of(
+    public static final Map<String, String> EDITABLE = Map.of(
             "appTitle", APP_TITLE,
             "tagline", TAGLINE,
             "defaultTheme", DEFAULT_THEME,

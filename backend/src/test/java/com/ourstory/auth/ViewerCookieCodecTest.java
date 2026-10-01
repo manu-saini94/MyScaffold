@@ -22,7 +22,7 @@ class ViewerCookieCodecTest {
 
     private ViewerCookieCodec codec(String secret) {
         ViewerProperties props = new ViewerProperties(null, List.of(), false, Duration.ofDays(30), 1000,
-                Duration.ofSeconds(5), 5, 60, Duration.ofMinutes(10));
+                Duration.ofSeconds(5), 5, 30, Duration.ofMinutes(10), Duration.ofHours(1));
         return new ViewerCookieCodec(secret, props, new ObjectMapper(), clock);
     }
 

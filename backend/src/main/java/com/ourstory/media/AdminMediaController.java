@@ -2,6 +2,7 @@ package com.ourstory.media;
 
 import com.ourstory.common.ApiException;
 import com.ourstory.common.UlidGenerator;
+import com.ourstory.settings.SettingsService;
 import java.time.OffsetDateTime;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -21,10 +22,12 @@ class AdminMediaController {
 
     private final MediaRepository repository;
     private final MediaStorage storage;
+    private final SettingsService settings;
 
-    AdminMediaController(MediaRepository repository, MediaStorage storage) {
+    AdminMediaController(MediaRepository repository, MediaStorage storage, SettingsService settings) {
         this.repository = repository;
         this.storage = storage;
+        this.settings = settings;
     }
 
     record MediaItem(String id, String filename, String mimeType, Integer width, Integer height,
@@ -49,7 +52,10 @@ class AdminMediaController {
         return new MediaPage(items, page, size, repository.count());
     }
 
-    /** Removes the DB row and the files. Never calls Google. */
+    /**
+     * Removes the DB row and the files and drops the photo from the hero list (moments and world covers are
+     * handled by the foreign keys: moments cascade, covers become NULL). Never calls Google.
+     */
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void delete(@PathVariable String id) {
@@ -59,6 +65,7 @@ class AdminMediaController {
         if (!repository.deleteById(id)) {
             throw ApiException.notFound("Media");
         }
+        settings.removeHeroMedia(id);
         storage.deleteAll(id);
     }
 }

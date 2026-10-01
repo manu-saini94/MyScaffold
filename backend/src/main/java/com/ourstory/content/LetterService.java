@@ -6,6 +6,7 @@ import com.ourstory.common.ApiException;
 import com.ourstory.common.UlidGenerator;
 import com.ourstory.content.ContentDtos.LetterRequest;
 import com.ourstory.content.ContentDtos.LetterResponse;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -17,8 +18,10 @@ public class LetterService {
     private final LetterRepository letters;
     private final WorldRepository worlds;
     private final UlidGenerator ulids;
+    private final Clock clock;
 
-    public LetterService(LetterRepository letters, WorldRepository worlds, UlidGenerator ulids) {
+    public LetterService(LetterRepository letters, WorldRepository worlds, UlidGenerator ulids, Clock clock) {
+        this.clock = clock;
         this.letters = letters;
         this.worlds = worlds;
         this.ulids = ulids;
@@ -34,7 +37,7 @@ public class LetterService {
         requireWorldIfPresent(req.worldId());
         int sort = req.sortOrder() != null ? req.sortOrder() : letters.nextSortOrder();
         Letter letter = new Letter(ulids.next(), req.worldId(), req.title().strip(), req.body(),
-                req.revealTrigger(), sort, ContentSupport.now());
+                req.revealTrigger(), sort, ContentSupport.now(clock));
         letters.insert(letter);
         return LetterResponse.of(letter);
     }
@@ -45,7 +48,9 @@ public class LetterService {
         int sort = req.sortOrder() != null ? req.sortOrder() : existing.sortOrder();
         Letter updated = new Letter(id, req.worldId(), req.title().strip(), req.body(), req.revealTrigger(),
                 sort, existing.createdAt());
-        letters.update(updated);
+        if (!letters.update(updated)) {
+            throw ApiException.notFound("Letter");
+        }
         return LetterResponse.of(updated);
     }
 
