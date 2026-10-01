@@ -56,7 +56,9 @@ class SecurityPolicyTest {
 
     @Test
     void unknownPathsAreDeniedForEveryone() throws Exception {
-        for (String path : new String[] {"/nothing", "/api/experience", "/actuator/env", "/api/whatever/x",
+        // /api/experience is deliberately not here any more: Phase 2B opens it to VIEWER/ADMIN (admin gets 404
+        // until a controller exists); its access matrix is covered in ViewerFlowTest.
+        for (String path : new String[] {"/nothing", "/actuator/env", "/api/whatever/x",
                 "/dev-not", "/private/file"}) {
             mvc.perform(get(path)).andExpect(status().isUnauthorized());
             mvc.perform(get(path).with(stranger())).andExpect(status().isForbidden());

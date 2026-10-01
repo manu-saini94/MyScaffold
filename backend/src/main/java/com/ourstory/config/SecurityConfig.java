@@ -3,7 +3,10 @@ package com.ourstory.config;
 import com.ourstory.auth.AdminAuthoritiesMapper;
 import com.ourstory.auth.AdminLoginHandlers;
 import com.ourstory.auth.AuthorizedClientCleaner;
+import com.ourstory.auth.AuthBodyLimitFilter;
 import com.ourstory.auth.ClientCleanupLogoutHandler;
+import com.ourstory.auth.ViewerAuthenticationFilter;
+import com.ourstory.auth.ViewerCookies;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,6 +18,7 @@ import org.springframework.boot.actuate.health.HealthEndpoint;
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.CsrfConfigurer;
@@ -25,6 +29,8 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import org.springframework.security.web.csrf.CsrfFilter;
+import org.springframework.security.web.session.SessionManagementFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
@@ -49,7 +55,8 @@ public class SecurityConfig {
             ObjectProvider<OAuth2AuthorizationRequestResolver> resolver,
             AdminAuthoritiesMapper authoritiesMapper,
             AuthorizedClientCleaner cleaner,
-            OurStoryProperties props) throws Exception {
+            OurStoryProperties props,
+            ViewerCookies viewerCookies) throws Exception {
         http
             .authorizeHttpRequests(auth -> {
                 auth.requestMatchers(EndpointRequest.to(HealthEndpoint.class)).permitAll();
@@ -61,9 +68,14 @@ public class SecurityConfig {
                     // TEMPORARY dev page (Phase 6 replaces it): static files only, no data. Dev profile only.
                     auth.requestMatchers("/dev/**").permitAll();
                 }
-                // Only the ADMIN role (verified email == ADMIN_EMAIL) may use the admin and media APIs.
-                // Phase 2 opens /api/media/** to viewer-cookie holders through MediaAccessPolicy.
-                auth.requestMatchers("/api/admin/**", "/api/media/**").hasRole("ADMIN");
+                // Unlock endpoints are public (CSRF still applies to the POSTs; GET /question issues the token).
+                auth.requestMatchers(HttpMethod.GET, "/api/auth/question", "/api/auth/status").permitAll();
+                auth.requestMatchers(HttpMethod.POST, "/api/auth/unlock", "/api/auth/lock").permitAll();
+                // Only the ADMIN role (verified email == ADMIN_EMAIL) may use the admin API.
+                auth.requestMatchers("/api/admin/**").hasRole("ADMIN");
+                // Viewers (unlock cookie) and the admin may read the experience, worlds and media.
+                auth.requestMatchers("/api/experience", "/api/experience/**", "/api/worlds/**", "/api/media/**")
+                        .hasAnyRole("VIEWER", "ADMIN");
                 auth.anyRequest().denyAll();
             })
             // Anonymous callers get a plain 401 everywhere (no redirect to a login page, no loops).
@@ -73,7 +85,10 @@ public class SecurityConfig {
             .logout(logout -> logout
                 .addLogoutHandler(new ClientCleanupLogoutHandler(cleaner))
                 .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler()))
-            .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class);
+            .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
+            .addFilterBefore(new AuthBodyLimitFilter(), CsrfFilter.class)
+            // After SessionManagementFilter so the stateless viewer login is never persisted to a session.
+            .addFilterAfter(new ViewerAuthenticationFilter(viewerCookies), SessionManagementFilter.class);
 
         // Google login is enabled only when a client registration exists (GOOGLE_CLIENT_ID set).
         if (clients.getIfAvailable() != null) {

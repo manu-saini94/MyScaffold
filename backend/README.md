@@ -29,7 +29,7 @@ Secrets are read only from the environment; never commit real values.
 |---|---|---|
 | `GOOGLE_CLIENT_ID` | for Google login | OAuth2 client id; the Google client is registered only when this is set |
 | `GOOGLE_CLIENT_SECRET` | with client id | OAuth2 client secret |
-| `VIEWER_COOKIE_SECRET` | prod (32+ chars) | Key used to sign the viewer unlock cookie (Phase 2). Not used by Phase 1 code, but the `prod` profile refuses to start when it is blank or shorter than 32 characters |
+| `VIEWER_COOKIE_SECRET` | prod (32+ chars) | Key used to sign the viewer unlock cookie (Phase 2). Used by Phase 2B; the `prod` profile refuses to start when it is blank or shorter than 32 characters |
 | `ADMIN_EMAIL` | with client id | The single Google account allowed to use `/api/admin/**` (verified email, case-insensitive), for example `you@example.com`. Required whenever `GOOGLE_CLIENT_ID` is set |
 | `OURSTORY_DATA_DIR` | no (default `./data`) | Root for the H2 database (`<dir>/db/ourstory`) and media files (`<dir>/media/{ulid}/{thumb,medium,full}.jpg`) |
 
@@ -50,8 +50,8 @@ not https; an `allowed-media-hosts` entry is not a lowercase bare host name; or,
 ### Security posture
 
 - Deny by default: only `/actuator/health`, static assets, `/oauth2/**`, `/login/**`, `/error`, and (dev profile only)
-  `/dev/**` are reachable without the admin role; `/api/admin/**` and `/api/media/**` need `ROLE_ADMIN`; everything
-  else is denied.
+  `/dev/**` are reachable without the admin role; `/api/admin/**` needs `ROLE_ADMIN`, `/api/media/**` ROLE_VIEWER or ROLE_ADMIN, the four `/api/auth/*` unlock
+  endpoints are public (CSRF applies); everything else is denied.
 - CSRF is enforced on every POST/PUT/PATCH/DELETE on every path, including `/logout`. There are no exemptions.
 - A Google account that is not the admin is signed out immediately after login (403 page, stored tokens removed).
   Logout also removes the stored Google tokens.
@@ -103,7 +103,7 @@ failures (including a Picker 403 such as "API not enabled") are `502 google-api-
 | `GET /api/admin/imports/{jobId}` | `{status RUNNING/COMPLETED/FAILED, total, done, failed, skipped, error, startedAt, finishedAt, failures[{filename,outcome,reason}]}` |
 | `GET /api/admin/media?unassigned=true&page=0&size=50` | Newest first; `size` 1..100 (Phase 1 returns all media) |
 | `DELETE /api/admin/media/{id}` | Removes DB row and files; never calls Google |
-| `GET /api/media/{id}/{thumb\|medium\|full}` | Image bytes, strong ETag, `Cache-Control: private, max-age=31536000, immutable`, 304 on `If-None-Match`; admin only for now (`MediaAccessPolicy` is the Phase 2 extension point) |
+| `GET /api/media/{id}/{thumb\|medium\|full}` | Image bytes, strong ETag, `Cache-Control: private, max-age=31536000, immutable`, 304 on `If-None-Match`; viewer or admin (`MediaAccessPolicy`) |
 
 409 reconnect body: `{"type":"urn:ourstory:problem:google-reconnect-required","status":409,"authorizeUrl":"/oauth2/authorization/google-picker",...}`.
 
@@ -111,6 +111,57 @@ failures (including a Picker 403 such as "API not enabled") are `502 google-api-
 
 `mvnw.cmd test` runs all tests and writes the JaCoCo report to `target/site/jacoco/index.html`
 (`target/site/jacoco/jacoco.csv` for numbers). Google is never called by tests (MockRestServiceServer / Mockito).
+
+## Viewer access (Phase 2B)
+
+The site is unlocked by answering one question. There are no accounts: a correct answer sets the signed
+`os_viewer` cookie; the admin (Google login) is allowed everywhere a viewer is.
+
+**Configuration** (environment, read once at startup, never committed; see the root `.env.example`):
+
+| Variable | Purpose |
+|---|---|
+| `OURSTORY_UNLOCK_QUESTION` | Question shown on the lock screen |
+| `OURSTORY_UNLOCK_ANSWERS` | Accepted answers, comma-separated (max 10, 1-100 chars each) |
+| `OURSTORY_UNLOCK_FORCE_RESET` | `true` for ONE start to replace stored credentials (signs every viewer out) |
+
+Bootstrap is idempotent: if hashed answers are already stored the variables are ignored unless force reset is set.
+Answers are stored only as PBKDF2WithHmacSHA256 hashes (`pbkdf2-sha256$iters$saltB64$hashB64`, 210,000 iterations,
+random 16-byte salt each, constant-time compare, all hashes always checked). Before hashing an answer is normalised
+(Unicode NFKC, lower-case, all whitespace removed), so ` sAmPlE ` and `sam ple` both match `Sample`. With nothing
+configured unlock is impossible (fail closed): `GET /api/auth/question` and `POST /api/auth/unlock` answer `503`
+and a WARN is logged at startup. `VIEWER_COOKIE_SECRET` signs the cookie (blank outside prod = random key per start,
+WARN). Tuning for tests only: `ourstory.viewer.*` (`pbkdf2-iterations` >= 1000, refused below 210000 in prod,
+`cookie-ttl` 30d, `epoch-cache-ttl` 5s, `max-failures-per-ip` 5, `max-failures-global` 60, `failure-window` 10m).
+
+**Endpoints** (errors are RFC 7807; CSRF applies to every POST, so call a GET first to receive `XSRF-TOKEN`, then
+send it as `X-XSRF-TOKEN`):
+
+| Method and path | Result |
+|---|---|
+| `GET /api/auth/question` | `200 {question}` (also issues the XSRF cookie); `503 unlock-not-configured` |
+| `GET /api/auth/status` | `200 {unlocked}` for viewer or admin; never errors on bad cookies |
+| `POST /api/auth/unlock {answer}` | `204` + `Set-Cookie: os_viewer`; `401 {attemptsRemaining}` (generic message, answer never echoed); `429` + `Retry-After`; `400` bad body (empty, over 100 chars, over 4 KiB); `403` no CSRF token; `503` not configured |
+| `POST /api/auth/lock` | `204`, clears the cookie |
+| `GET/PUT /api/admin/settings` | ADMIN. GET: non-secret settings + `unlockQuestion` + `unlockAnswersConfigured` (count only, never answers or hashes). PUT: partial update of `appTitle, tagline, defaultTheme (rose\|cinema), specialDate, herName, myName, easterEggNicknames, heroMediaIds, unlockQuestion` and write-only `unlockAnswers` (1-10, replaces all hashes); changing the question or answers signs every viewer out. `400` with `errors{field:message}` for invalid or unknown keys |
+| `POST /api/admin/settings/sign-out-everyone` | ADMIN, `204`, bumps `viewer_epoch` |
+
+`/api/experience`, `/api/worlds/**` and `/api/media/**` need ROLE_VIEWER or ROLE_ADMIN (anonymous 401);
+`/api/admin/**` stays ADMIN only (a viewer gets 403).
+
+**Cookie**: `os_viewer` = `base64url({"v":1,"iat","exp","ep"}) . base64url(HMAC-SHA256)`, 30 days, `HttpOnly`,
+`SameSite=Lax`, `Path=/`, `Secure` unless the dev profile relaxes it (same property as the session cookie). It is
+checked on every request (constant-time MAC, expiry, `iat` not in the future, `ep` equals the current `viewer_epoch`,
+cached 5 s) and creates a stateless ROLE_VIEWER authentication: no HttpSession is created for viewers.
+
+**Rate limiting** (in memory, Caffeine, bounded): 5 failed attempts per client IP and 60 failed attempts overall per
+sliding 10 minutes, then `429` + `Retry-After`; successes are not counted. Limits and length checks run BEFORE any
+PBKDF2 work. The client IP is `request.getRemoteAddr()`; in prod `forward-headers-strategy=framework` makes that the
+proxy-reported address, so port 8080 must be reachable only through the proxy.
+
+**Settings table** (`V3__settings.sql`): `settings("key","value",updated_at)` (quoted because both are reserved in
+H2) seeded with non-secret defaults only (title `Anvi ❤ Manu`, tagline, theme `rose`, special date, names,
+nicknames, hero media, `viewer_epoch`). Code reads them through `SettingsService`.
 
 ## JVM sizing
 

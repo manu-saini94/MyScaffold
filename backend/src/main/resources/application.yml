@@ -58,3 +58,8 @@ ourstory:
     min-free-bytes: 209715200  # refuse to write when less than 200 MB is free on the data volume
   dev-tools:
     enabled: false           # /dev/** static pages; only application-dev.yml turns this on
+  viewer:
+    # Bootstrap only (see UnlockBootstrap): stored hashed in the settings table; never commit real values.
+    unlock-question: ${OURSTORY_UNLOCK_QUESTION:}
+    unlock-answers: ${OURSTORY_UNLOCK_ANSWERS:}      # comma-separated
+    unlock-force-reset: ${OURSTORY_UNLOCK_FORCE_RESET:false}
