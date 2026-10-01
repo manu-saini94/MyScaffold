@@ -56,6 +56,11 @@ Short log of choices and dependency justifications. Newest sections at the botto
 - **Content:** worlds, moments and letters in V4; deleting a photo cascades to its moments; letter bodies are stored as raw markdown and must be rendered safely on the client.
 - **Media access:** `MediaAccessPolicy` is role-based (VIEWER or ADMIN); the "photo must belong to a visible world" rule is added by the experience layer.
 - **Our Forever unlock:** 2027-02-14T00:00:00+05:30 (India time), stored as an instant; the server clock is the source of truth for the countdown.
+- **Experience API:** `GET /api/experience` and `GET /api/worlds/{slug}` build their payload per request with a constant number of SQL statements and send `Cache-Control: private, no-store`. No server-side cache: a tiny private site, `serverTime` must be fresh and locks change with time, so a cache would only add staleness bugs.
+- **Locked worlds are teasers by type:** locked and open worlds are different response records, so a locked world cannot leak cover, counts, previews or text. A viewer asking for an unpublished or unknown slug gets the same 404; a locked slug gets a 200 teaser (the countdown screen needs it).
+- **Media visibility:** a viewer may read a media file only if a moment or the cover of a PUBLISHED, currently unlocked world uses it (admin: any). Hidden media answers 404, never 403. The hero setting grants nothing on its own. The decision is one EXISTS query per request and is never cached because locks open by time.
+- **Single `Clock` bean** (`ClockConfig`, `@ConditionalOnMissingBean`), consumed by Part B via `ObjectProvider<Clock>` and by the experience code; tests override it.
+- **Hero:** configured `heroMediaIds` (existing and visible only), else covers of unlocked worlds, then the first moment photo of each unlocked world, max 8. Letters without a world are not exposed to viewers.
 
 ## Open decisions
 - Fonts, rose motif and launcher density (see the Phase 0 report).

@@ -48,7 +48,9 @@ class MediaController {
             throw new AccessDeniedException("Media access denied");
         }
         Optional<MediaSize> mediaSize = MediaSize.fromPath(size);
-        Optional<OffsetDateTime> importedAt = mediaSize.isEmpty() ? Optional.empty() : repository.findImportedAt(id);
+        // Not-visible media answers exactly like a missing id (404, never 403): no existence leak.
+        boolean readable = mediaSize.isPresent() && policy.canRead(authentication, id);
+        Optional<OffsetDateTime> importedAt = readable ? repository.findImportedAt(id) : Optional.empty();
         Optional<StoredFile> file = importedAt.isEmpty() ? Optional.empty() : storage.find(id, mediaSize.get());
         if (file.isEmpty()) {
             throw ApiException.notFound("Media");

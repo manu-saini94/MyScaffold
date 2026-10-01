@@ -1,0 +1,180 @@
+# Our Story API: VS Code "REST Client" / IntelliJ HTTP Client file.
+# Run the backend with the dev profile first: mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=dev
+#
+# CSRF: every POST/PUT/DELETE needs the header X-XSRF-TOKEN equal to the XSRF-TOKEN cookie.
+#  1. Send "question" below (any GET sets the cookie; the client keeps its cookie jar automatically).
+#  2. Copy the cookie value into @xsrf (REST Client: see the response's Set-Cookie header).
+# Never commit real answers; put the unlock answer into your own local, uncommitted variable.
+
+@baseUrl = http://localhost:8080
+@xsrf = PASTE-XSRF-TOKEN-COOKIE-VALUE
+@answer = PASTE-THE-ANSWER
+@worldSlug = where-it-all-began
+
+### ---------------- Viewer flow ----------------
+
+### 1. Lock screen question (also issues the XSRF-TOKEN cookie)
+# @name question
+GET {{baseUrl}}/api/auth/question
+
+### 2. Am I unlocked?
+GET {{baseUrl}}/api/auth/status
+
+### 3. Unlock (204 + Set-Cookie os_viewer). Without X-XSRF-TOKEN this is 403.
+POST {{baseUrl}}/api/auth/unlock
+Content-Type: application/json
+X-XSRF-TOKEN: {{xsrf}}
+
+{ "answer": "{{answer}}" }
+
+### 4. Everything the home screen needs
+GET {{baseUrl}}/api/experience
+
+### 5. One world (open: full content; locked: teaser; unknown or unpublished: 404)
+GET {{baseUrl}}/api/worlds/{{worldSlug}}
+
+### 6. Locked world teaser (before 2027-02-14T00:00:00+05:30)
+GET {{baseUrl}}/api/worlds/our-forever
+
+### 7. Unknown world -> 404 problem+json
+GET {{baseUrl}}/api/worlds/nope
+
+### 8. A photo (replace the id with a mediaId from the experience/world response)
+GET {{baseUrl}}/api/media/01K6G2V8Q3N7X4B2C9D5E1WA01/thumb
+
+### 9. Lock again (clears the cookie)
+POST {{baseUrl}}/api/auth/lock
+X-XSRF-TOKEN: {{xsrf}}
+
+### ---------------- Admin flow (needs the Google admin session) ----------------
+# Sign in once in the browser: {{baseUrl}}/oauth2/authorization/google, then copy the JSESSIONID cookie into
+# the header below (or use the REST Client cookie jar after browsing). All mutating calls need X-XSRF-TOKEN.
+
+@adminCookie = JSESSIONID=PASTE-SESSION-ID
+
+### Who am I
+GET {{baseUrl}}/api/admin/me
+Cookie: {{adminCookie}}
+
+### Start a Google Photos Picker session
+POST {{baseUrl}}/api/admin/picker/sessions
+Cookie: {{adminCookie}}; XSRF-TOKEN={{xsrf}}
+X-XSRF-TOKEN: {{xsrf}}
+Content-Type: application/json
+
+{ "maxItemCount": 50 }
+
+### Poll the picker session
+GET {{baseUrl}}/api/admin/picker/sessions/PASTE-SESSION-ID
+Cookie: {{adminCookie}}
+
+### Start the import (202 {jobId})
+POST {{baseUrl}}/api/admin/picker/sessions/PASTE-SESSION-ID/import
+Cookie: {{adminCookie}}; XSRF-TOKEN={{xsrf}}
+X-XSRF-TOKEN: {{xsrf}}
+
+### Import progress
+GET {{baseUrl}}/api/admin/imports/PASTE-JOB-ID
+Cookie: {{adminCookie}}
+
+### Imported media
+GET {{baseUrl}}/api/admin/media?page=0&size=50
+Cookie: {{adminCookie}}
+
+### Delete a media item
+DELETE {{baseUrl}}/api/admin/media/PASTE-MEDIA-ID
+Cookie: {{adminCookie}}; XSRF-TOKEN={{xsrf}}
+X-XSRF-TOKEN: {{xsrf}}
+
+### List worlds (all, including unpublished)
+GET {{baseUrl}}/api/admin/worlds
+Cookie: {{adminCookie}}
+
+### Create a world
+POST {{baseUrl}}/api/admin/worlds
+Cookie: {{adminCookie}}; XSRF-TOKEN={{xsrf}}
+X-XSRF-TOKEN: {{xsrf}}
+Content-Type: application/json
+
+{
+  "slug": "road-trips",
+  "title": "Road Trips",
+  "subtitle": "Windows down",
+  "tagline": "Are we there yet?",
+  "layout": "POSTCARDS",
+  "themeAccent": "#b76e79",
+  "unlockAt": null,
+  "introText": "Intro",
+  "outroText": "Outro",
+  "published": false
+}
+
+### Update a world (full body)
+PUT {{baseUrl}}/api/admin/worlds/PASTE-WORLD-ID
+Cookie: {{adminCookie}}; XSRF-TOKEN={{xsrf}}
+X-XSRF-TOKEN: {{xsrf}}
+Content-Type: application/json
+
+{ "slug": "road-trips", "title": "Road Trips", "layout": "POSTCARDS", "published": true }
+
+### Reorder worlds (every id exactly once)
+PUT {{baseUrl}}/api/admin/worlds/reorder
+Cookie: {{adminCookie}}; XSRF-TOKEN={{xsrf}}
+X-XSRF-TOKEN: {{xsrf}}
+Content-Type: application/json
+
+{ "orderedIds": ["PASTE-ID-1", "PASTE-ID-2"] }
+
+### Moments of a world
+GET {{baseUrl}}/api/admin/worlds/PASTE-WORLD-ID/moments
+Cookie: {{adminCookie}}
+
+### Replace the moments (array order is display order)
+PUT {{baseUrl}}/api/admin/worlds/PASTE-WORLD-ID/moments
+Cookie: {{adminCookie}}; XSRF-TOKEN={{xsrf}}
+X-XSRF-TOKEN: {{xsrf}}
+Content-Type: application/json
+
+{ "moments": [ { "mediaId": "PASTE-MEDIA-ID", "caption": "First coffee", "note": "back of the polaroid", "happenedOn": "2019-03-02", "place": "Pune", "favourite": true } ] }
+
+### Letters
+GET {{baseUrl}}/api/admin/letters
+Cookie: {{adminCookie}}
+
+### Create a letter (body is raw markdown)
+POST {{baseUrl}}/api/admin/letters
+Cookie: {{adminCookie}}; XSRF-TOKEN={{xsrf}}
+X-XSRF-TOKEN: {{xsrf}}
+Content-Type: application/json
+
+{ "worldId": "PASTE-WORLD-ID", "title": "For you", "body": "# Hello\n\nI **love** you.", "revealTrigger": "WORLD_OUTRO" }
+
+### Update / delete a letter
+PUT {{baseUrl}}/api/admin/letters/PASTE-LETTER-ID
+Cookie: {{adminCookie}}; XSRF-TOKEN={{xsrf}}
+X-XSRF-TOKEN: {{xsrf}}
+Content-Type: application/json
+
+{ "worldId": "PASTE-WORLD-ID", "title": "For you", "body": "Edited", "revealTrigger": "SEALED_ICON" }
+
+###
+DELETE {{baseUrl}}/api/admin/letters/PASTE-LETTER-ID
+Cookie: {{adminCookie}}; XSRF-TOKEN={{xsrf}}
+X-XSRF-TOKEN: {{xsrf}}
+
+### Settings
+GET {{baseUrl}}/api/admin/settings
+Cookie: {{adminCookie}}
+
+### Update settings (partial; unlockAnswers is write-only and signs every viewer out)
+PUT {{baseUrl}}/api/admin/settings
+Cookie: {{adminCookie}}; XSRF-TOKEN={{xsrf}}
+X-XSRF-TOKEN: {{xsrf}}
+Content-Type: application/json
+
+{ "tagline": "Love you till eternity and back", "heroMediaIds": ["PASTE-MEDIA-ID"] }
+
+### Sign every viewer out
+POST {{baseUrl}}/api/admin/settings/sign-out-everyone
+Cookie: {{adminCookie}}; XSRF-TOKEN={{xsrf}}
+X-XSRF-TOKEN: {{xsrf}}

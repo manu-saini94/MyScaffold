@@ -87,6 +87,10 @@ class ViewerFlowTest {
         for (MediaSize size : MediaSize.values()) {
             storage.write(id, size, com.ourstory.TestSupport.jpeg(Color.GREEN, 8, 8));
         }
+        // Viewers only read media of a published, unlocked world (Phase 2C): place it in a seeded open world.
+        jdbc.sql("INSERT INTO moment (id, world_id, media_id, sort_order, is_favourite) "
+                + "VALUES (:id, '01K6G2V8Q3N7X4B2C9D5E1WA01', :media, 1, FALSE)")
+                .param("id", ulids.next()).param("media", id).update();
         return id;
     }
 

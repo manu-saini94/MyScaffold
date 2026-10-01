@@ -194,6 +194,31 @@ proxy-reported address, so port 8080 must be reachable only through the proxy.
 H2) seeded with non-secret defaults only (title `Anvi ❤ Manu`, tagline, theme `rose`, special date, names,
 nicknames, hero media, `viewer_epoch`). Code reads them through `SettingsService`.
 
+## Experience (Phase 2C)
+
+Read API for the viewer SPA, package `com.ourstory.experience`; the full contract is
+[`docs/api-contract.md`](../docs/api-contract.md) (REST samples in `docs/api/our-story.http`, scripted check in
+`docs/api/smoke.ps1`).
+
+| Endpoint | Result |
+|---|---|
+| `GET /api/experience` | `serverTime, appTitle, tagline, defaultTheme, specialDate, easterEggNicknames, profiles, hero, worlds` (+ `adminPreview` for admins) |
+| `GET /api/worlds/{slug}` | open world with `moments` and `letters`; locked world: teaser only; unknown/unpublished: identical 404; bad slug 400 |
+
+- A world is LOCKED while `Clock.instant() < unlock_at` (the exact instant is open). A locked world exposes only
+  `slug, title, subtitle, layout, themeAccent, sortOrder (card), locked, unlockAt`: no cover, count, previews, text.
+- Admins see locked and unpublished worlds as open and get `adminPreview:true`; viewers never do.
+- Both responses are `Cache-Control: private, no-store` and nothing is cached server-side (tiny private site; no
+  staleness bugs). The number of SQL statements is constant (grouped queries; tested with a statement counter).
+- Letter bodies are returned as RAW markdown; the client must render them safely (never `innerHTML`).
+- **Media visibility** (`RoleBasedMediaAccessPolicy`): ADMIN reads any media. A VIEWER reads a file only when it is
+  used by a moment of, or is the cover of, a PUBLISHED world that is NOT locked at that instant (one EXISTS query
+  per request, clock evaluated every time). Listing an id in `heroMediaIds` grants nothing by itself. Anything else is
+  `404`, identical to a nonexistent id (never 403), so existence does not leak.
+- One `Clock` bean (`config/ClockConfig`, UTC, `@ConditionalOnMissingBean`) is shared by the settings, viewer
+  cookie, rate limiter and experience code; tests replace it by declaring their own `Clock` bean.
+- Smoke test against a running backend (dev profile): `powershell -File docs/api/smoke.ps1 -Answer <answer> -BaseUrl http://localhost:8080`.
+
 ## JVM sizing
 
 Intended for a small host: `java -Xmx256m -jar target/our-story-0.0.1-SNAPSHOT.jar`

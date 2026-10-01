@@ -2,9 +2,16 @@ package com.ourstory.media;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -64,6 +71,54 @@ public class MediaRepository {
 
     public boolean deleteById(String id) {
         return jdbc.sql("DELETE FROM media WHERE id = :id").param("id", id).update() > 0;
+    }
+
+    /** Moment media of PUBLISHED worlds that are not locked at {@code :now} (locked = unlock_at in the future). */
+    private static final String OPEN_MOMENT_MEDIA = """
+            SELECT m.media_id AS media_id FROM moment m JOIN world w ON w.id = m.world_id
+            WHERE w.published = TRUE AND (w.unlock_at IS NULL OR w.unlock_at <= :now)
+            """;
+
+    /** Covers of PUBLISHED worlds that are not locked at {@code :now}. */
+    private static final String OPEN_COVERS = """
+            SELECT w.cover_media_id AS media_id FROM world w
+            WHERE w.cover_media_id IS NOT NULL AND w.published = TRUE
+              AND (w.unlock_at IS NULL OR w.unlock_at <= :now)
+            """;
+
+    /**
+     * Viewer visibility of ONE media item: referenced by a moment of, or the cover of, a published world that
+     * is not locked at {@code now}. A single EXISTS query; never loads the lqip. Evaluated on every call.
+     */
+    public boolean isVisibleToViewer(String id, Instant now) {
+        return jdbc.sql("SELECT EXISTS (SELECT 1 FROM (" + OPEN_MOMENT_MEDIA + " UNION ALL " + OPEN_COVERS
+                        + ") v WHERE v.media_id = :id)")
+                .param("id", id).param("now", now.atOffset(ZoneOffset.UTC)).query(Boolean.class).single();
+    }
+
+    /** The subset of {@code ids} a viewer may see (same rule as {@link #isVisibleToViewer}), in one query. */
+    public Set<String> findViewerVisibleIds(Collection<String> ids, Instant now) {
+        if (ids.isEmpty()) {
+            return Set.of();
+        }
+        return new HashSet<>(jdbc.sql("SELECT DISTINCT v.media_id FROM (" + OPEN_MOMENT_MEDIA + " UNION ALL "
+                        + OPEN_COVERS + ") v WHERE v.media_id IN (:ids)")
+                .param("ids", ids).param("now", now.atOffset(ZoneOffset.UTC)).query(String.class).list());
+    }
+
+    /** Display columns (no file info) of the existing items among {@code ids}, in one query. */
+    public Map<String, MediaCard> findCards(Collection<String> ids) {
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, MediaCard> cards = new LinkedHashMap<>();
+        jdbc.sql("SELECT id, width, height, lqip, dominant_color FROM media WHERE id IN (:ids)")
+                .param("ids", ids)
+                .query((rs, i) -> cards.put(rs.getString("id"), new MediaCard(rs.getString("id"),
+                        (Integer) rs.getObject("width"), (Integer) rs.getObject("height"), rs.getString("lqip"),
+                        rs.getString("dominant_color"))))
+                .list();
+        return Map.copyOf(cards);
     }
 
     private static MediaRecord map(ResultSet rs, int row) throws SQLException {
