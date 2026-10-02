@@ -1,5 +1,12 @@
 # Dev conveniences. The Vite dev server proxies /api, so no CORS is configured.
 # Run with: mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=dev
+spring:
+  config:
+    # Dev only: read the git-ignored root .env (spring-boot:run starts in backend/, a jar may start in the root).
+    # Real environment variables still win over these values. Write values unquoted: KEY=value.
+    import:
+      - optional:file:../.env[.properties]
+      - optional:file:./.env[.properties]
 server:
   servlet:
     session:

@@ -176,7 +176,10 @@ Content code never touches Google Photos or media files. Read methods for the ex
 The site is unlocked by answering one question. There are no accounts: a correct answer sets the signed
 `os_viewer` cookie; the admin (Google login) is allowed everywhere a viewer is.
 
-**Configuration** (environment, read once at startup, never committed; see the root `.env.example`):
+**Configuration** (environment, read once at startup, never committed; see the root `.env.example`). In the `dev`
+profile the git-ignored root `.env` is also loaded (`application-dev.yml`), so copying `.env.example` to `.env` and
+filling it in is enough locally; real environment variables still win. Other profiles read only the environment.
+Without these values unlock answers `503 unlock-not-configured`.
 
 | Variable | Purpose |
 |---|---|
