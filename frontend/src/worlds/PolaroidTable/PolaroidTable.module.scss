@@ -1,0 +1,333 @@
+@use '../../styles/mixins' as *;
+
+// Handwriting without a webfont: the platform's script face, else the display serif in italic.
+$script: 'Segoe Print', 'Bradley Hand', 'Snell Roundhand', 'Dancing Script', 'Comic Neue', cursive;
+// Ink on paper stays dark gold in both themes: the paper is light either way.
+$paper-ink: #6b4e0e;
+$noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .33 0 0 0 0 .15 0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+
+.layout {
+  width: min(100%, 72rem);
+  margin: 0 auto;
+  padding: 0 var(--space-4);
+
+  @include up($bp-md) {
+    padding-inline: var(--space-6);
+  }
+}
+
+.hint {
+  margin: 0 0 var(--space-3);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  color: var(--world-ink-muted);
+  text-align: center;
+}
+
+// ---------- the table: soft linen (rose), dark walnut (cinema) ----------
+
+.table {
+  position: relative;
+  border-radius: 28px;
+  border: 1px solid rgba(201, 162, 39, 0.28);
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(255, 255, 255, 0.7), transparent 60%),
+    radial-gradient(90% 70% at 50% 120%, var(--world-accent-soft), transparent 70%),
+    $noise,
+    repeating-linear-gradient(0deg, rgba(120, 88, 34, 0.045) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(90deg, rgba(120, 88, 34, 0.04) 0 1px, transparent 1px 3px),
+    linear-gradient(160deg, #faf4e8, #f1e6d2);
+  box-shadow:
+    inset 0 0 0 6px rgba(255, 255, 255, 0.55),
+    inset 0 -30px 60px -30px rgba(120, 88, 34, 0.18),
+    0 30px 60px -40px rgba(107, 78, 14, 0.45);
+  touch-action: pan-y;
+
+  &.bare {
+    display: grid;
+    place-items: center;
+    min-height: 18rem;
+    padding: var(--space-5);
+  }
+}
+
+:global([data-theme='cinema']) .table {
+  border-color: rgba(241, 213, 138, 0.16);
+  background:
+    radial-gradient(110% 70% at 50% 0%, rgba(255, 220, 150, 0.1), transparent 60%),
+    $noise,
+    repeating-linear-gradient(
+      93deg,
+      rgba(0, 0, 0, 0.16) 0 2px,
+      transparent 2px 9px,
+      rgba(255, 210, 150, 0.05) 9px 11px,
+      transparent 11px 23px
+    ),
+    linear-gradient(170deg, #4a2f1d, #2c1a10 70%, #24150c);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 220, 160, 0.06),
+    inset 0 -40px 80px -30px rgba(0, 0, 0, 0.5),
+    0 30px 60px -36px rgba(0, 0, 0, 0.8);
+}
+
+.empty {
+  max-width: 24rem;
+  font-family: $script;
+  font-size: 1.15rem;
+  line-height: 1.6;
+  text-align: center;
+  color: var(--world-ink);
+}
+
+// ---------- a polaroid ----------
+
+.card {
+  position: absolute;
+  cursor: grab;
+  touch-action: pan-y;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.flipper {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: inherit;
+  cursor: inherit;
+  perspective: 1100px;
+  -webkit-tap-highlight-color: transparent;
+
+  &:focus-visible {
+    outline: none;
+
+    .front,
+    .back {
+      outline: 2px solid var(--world-accent);
+      outline-offset: 4px;
+    }
+  }
+}
+
+.inner {
+  position: relative;
+  display: block;
+  transform-style: preserve-3d;
+}
+
+.front,
+.back {
+  display: block;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  border-radius: 3px;
+  box-shadow:
+    0 1px 1px rgba(60, 40, 10, 0.12),
+    0 10px 22px -10px rgba(60, 40, 10, 0.35),
+    0 26px 40px -30px var(--world-accent-glow);
+  transition: box-shadow var(--dur-base) var(--ease-out);
+
+  .card[data-dragging] & {
+    box-shadow:
+      0 2px 3px rgba(60, 40, 10, 0.12),
+      0 28px 44px -16px rgba(60, 40, 10, 0.42),
+      0 40px 60px -30px var(--world-accent-glow);
+  }
+}
+
+.front {
+  padding: 9px 9px 0;
+  background: linear-gradient(170deg, #ffffff, #f7f3ea);
+}
+
+.photo {
+  display: block;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: #efe7d8;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+.img {
+  height: 100%;
+}
+
+.strip {
+  display: block;
+  height: 37px;
+  padding: 0 30px; // clear of the lens button
+  overflow: hidden;
+  font-family: $script;
+  font-size: 0.98rem;
+  line-height: 37px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-align: center;
+  color: $paper-ink;
+}
+
+.back {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 1.1rem 1rem 0.9rem;
+  overflow: hidden;
+  transform: rotateY(180deg);
+  color: $paper-ink;
+  font-family: $script;
+  // faint ruled lines and a little ageing at the corners
+  background:
+    radial-gradient(70% 50% at 100% 100%, rgba(201, 162, 39, 0.14), transparent 70%),
+    repeating-linear-gradient(180deg, transparent 0 25px, rgba(122, 90, 18, 0.12) 25px 26px),
+    linear-gradient(170deg, #fffdf7, #f6eedc);
+  background-position: 0 0, 0 14px, 0 0;
+}
+
+// reduced motion: no turning, the back fades in over the front
+.inner[data-flat] {
+  .back {
+    transform: none;
+    opacity: 0;
+    transition: opacity var(--dur-base) linear;
+  }
+
+  .front {
+    transition: opacity var(--dur-base) linear;
+  }
+
+  &[data-flipped] .back {
+    opacity: 1;
+  }
+
+  &[data-flipped] .front {
+    opacity: 0;
+  }
+}
+
+.backCaption {
+  font-size: 1.2rem;
+  line-height: 1.25;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  // not --world-gold-gradient: the cinema one is too pale for paper, so every card keeps the dark gold
+  background-image:linear-gradient(100deg, #6b4e0e 0%, #a37c18 35%, #c9a227 52%, #8a6a14 80%, #6b4e0e 100%);
+}
+
+.note {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  font-size: 0.92rem;
+  line-height: 26px;
+}
+
+.meta {
+  margin-top: auto;
+  padding-right: 28px; // clear of the lens button
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8a6a14;
+}
+
+.zoom {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid rgba(201, 162, 39, 0.45);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  color: $paper-ink;
+  cursor: zoom-in;
+  opacity: 0.85;
+  transition:
+    opacity var(--dur-base) var(--ease-out),
+    transform var(--dur-base) var(--ease-out);
+
+  @media (hover: hover) {
+    opacity: 0;
+
+    .card:hover & {
+      opacity: 1;
+    }
+  }
+
+  &:hover {
+    transform: scale(1.1);
+  }
+
+  &:focus-visible {
+    opacity: 1;
+    @include focus-ring(2px);
+  }
+}
+
+// ---------- foot ----------
+
+.foot {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.tally {
+  font-family: $script;
+  font-size: 1.05rem;
+  color: var(--world-ink);
+}
+
+.done {
+  min-height: 2.75rem;
+  padding: 0.6rem 1.4rem;
+  border: 1px solid color-mix(in srgb, #c9a227 55%, transparent);
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.6), rgba(244, 227, 161, 0.32));
+  color: var(--world-ink);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    transform var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 26px -12px rgba(138, 106, 20, 0.55);
+  }
+
+  &:active {
+    transform: scale(0.97);
+  }
+
+  &:focus-visible {
+    @include focus-ring;
+  }
+
+  @include reduced-motion {
+    transition: none;
+
+    &:hover,
+    &:active {
+      transform: none;
+    }
+  }
+}
+
+:global([data-theme='cinema']) .done {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(201, 162, 39, 0.16));
+}

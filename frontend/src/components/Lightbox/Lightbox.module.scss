@@ -1,0 +1,11 @@
+// yarl reads its look from --yarl__* custom properties.
+.lightbox {
+  --yarl__color_backdrop: rgba(12, 8, 4, 0.94);
+  --yarl__color_button: rgba(244, 227, 161, 0.85);
+  --yarl__color_button_active: #f4e3a1;
+  --yarl__slide_title_color: #f4e3a1;
+  --yarl__slide_description_color: rgba(255, 248, 230, 0.86);
+  --yarl__slide_title_font_size: 1.05rem;
+  --yarl__slide_title_font_weight: 500;
+  --yarl__slide_captions_container_background: linear-gradient(to top, rgba(12, 8, 4, 0.82), transparent);
+}

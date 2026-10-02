@@ -1,0 +1,531 @@
+@use '../../styles/mixins' as *;
+@use '../../styles/typography' as *;
+
+// Anything that draws a seal sits under .sealScope: --seal (inline, a valid world hex) else the world/theme accent.
+.sealScope {
+  --seal-c: var(--seal, var(--world-accent, var(--accent)));
+}
+
+// ---------- envelope art (shared by the outro card and the corner icon) ----------
+
+$paper-hi: #fffaf0;
+$paper-lo: #f2e2bd;
+$flap-hi: #f3e3bd;
+$flap-lo: #e3c88c;
+
+.envelope {
+  position: relative;
+  display: block;
+  aspect-ratio: 3 / 2;
+
+  > span {
+    position: absolute;
+    display: block;
+  }
+}
+
+.envBack {
+  inset: 0;
+  z-index: 0;
+  border-radius: 6% / 9%;
+  background: linear-gradient(160deg, $paper-hi, $paper-lo);
+  box-shadow:
+    inset 0 0 0 1px rgba(138, 106, 20, 0.28),
+    0 10px 24px -12px rgba(107, 78, 14, 0.45);
+}
+
+.envSheet {
+  left: 9%;
+  right: 9%;
+  top: -24%;
+  height: 72%;
+  z-index: 2;
+  border-radius: 3px;
+  background: repeating-linear-gradient(180deg, transparent 0 7px, rgba(138, 106, 20, 0.12) 7px 8px) 18% 30% / 64% 50% no-repeat,
+    #fffdf7;
+  box-shadow: 0 1px 3px rgba(107, 78, 14, 0.25);
+}
+
+.envPocket {
+  inset: 0;
+  z-index: 3;
+  border-radius: 6% / 9%;
+  clip-path: polygon(0 20%, 50% 64%, 100% 20%, 100% 100%, 0 100%);
+  background:
+    linear-gradient(to top right, rgba(138, 106, 20, 0.1), transparent 50%),
+    linear-gradient(to top left, rgba(138, 106, 20, 0.1), transparent 50%),
+    linear-gradient(180deg, #fff6e2, $paper-lo);
+}
+
+.envFlap {
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 64%;
+  z-index: 4;
+  transform-origin: 50% 0;
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  background: linear-gradient(180deg, $flap-hi, $flap-lo);
+}
+
+.envelopeOpened .envFlap {
+  z-index: 1;
+  transform: scaleY(-1);
+  background: linear-gradient(0deg, $flap-hi, $flap-lo);
+}
+
+.envSeal {
+  left: 50%;
+  top: 64%;
+  z-index: 5;
+  width: 30%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+
+  svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 2px 2px rgba(60, 8, 18, 0.35));
+  }
+}
+
+.envelopeOpened .envSeal {
+  top: 74%;
+}
+
+.brokenLeft {
+  transform: translate(-9%, 3%) rotate(-14deg);
+}
+
+.brokenRight {
+  transform: translate(9%, 7%) rotate(11deg);
+}
+
+// ---------- outro letters ----------
+
+.outroLetters {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  margin-block: var(--space-3);
+}
+
+.outroLead {
+  font-family: 'Fraunces', var(--font-display);
+  font-style: italic;
+  font-size: 1.05rem;
+  color: var(--world-ink, var(--text));
+}
+
+.outroList {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.outroCard {
+  display: grid;
+  justify-items: center;
+  gap: 0.35rem;
+  padding: var(--space-3) var(--space-4) var(--space-3);
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  cursor: pointer;
+
+  .outroEnvelope {
+    transition:
+      transform var(--dur-slow) var(--ease-out),
+      filter var(--dur-slow) var(--ease-out);
+  }
+
+  &:hover .outroEnvelope {
+    transform: translateY(-6px) rotate(-2deg);
+    filter: drop-shadow(0 14px 22px color-mix(in srgb, var(--seal-c) 30%, transparent));
+  }
+
+  &:active .outroEnvelope {
+    transform: translateY(-2px) scale(0.97);
+  }
+
+  &:focus-visible {
+    @include focus-ring;
+  }
+}
+
+.outroEnvelope {
+  width: clamp(9rem, 7rem + 8vw, 11.5rem);
+  margin-bottom: var(--space-2);
+}
+
+.outroTitle {
+  font-family: 'Fraunces', var(--font-display);
+  font-style: italic;
+  font-size: clamp(1.25rem, 1.1rem + 0.6vw, 1.5rem);
+  line-height: 1.2;
+  @include gold-text;
+}
+
+.outroHint {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--world-ink-muted, var(--text-muted));
+}
+
+// ---------- the corner icon (SEALED_ICON) ----------
+
+.corner {
+  position: fixed;
+  // phone: tucked to the edge so it clears the outro's centred buttons
+  right: calc(var(--space-2) + env(safe-area-inset-right));
+  bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+  z-index: 18; // over the world frame (15), under the header (20)
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  @include up($bp-sm) {
+    right: calc(var(--space-4) + env(safe-area-inset-right));
+    bottom: calc(var(--space-5) + env(safe-area-inset-bottom));
+  }
+}
+
+@keyframes bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-3deg);
+  }
+  50% {
+    transform: translateY(-7px) rotate(2deg);
+  }
+}
+
+@keyframes beckon {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  70%,
+  100% {
+    transform: scale(1.55);
+    opacity: 0;
+  }
+}
+
+.cornerButton {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 3.6rem;
+  height: 3.6rem;
+  padding: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  @include glass;
+  border-color: color-mix(in srgb, #c9a227 45%, transparent);
+  box-shadow: 0 12px 28px -12px color-mix(in srgb, var(--seal-c) 55%, transparent);
+  animation: bob 4.2s var(--ease-in-out) infinite;
+
+  // a soft ring that calls attention while the letter is still sealed
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 50%;
+    border: 1.5px solid color-mix(in srgb, var(--seal-c) 55%, transparent);
+    animation: beckon 2.8s var(--ease-out) infinite;
+    pointer-events: none;
+  }
+
+  &:has(.envelopeOpened)::after {
+    content: none;
+  }
+
+  &:hover {
+    animation-play-state: paused;
+    box-shadow: 0 16px 34px -12px color-mix(in srgb, var(--seal-c) 70%, transparent);
+  }
+
+  &:active {
+    transform: scale(0.94);
+  }
+
+  &:focus-visible {
+    @include focus-ring;
+  }
+
+  @include up($bp-sm) {
+    width: 4.4rem;
+    height: 4.4rem;
+  }
+
+  @include reduced-motion {
+    animation: none;
+
+    &::after {
+      animation: none;
+      content: none;
+    }
+  }
+}
+
+.cornerEnvelope {
+  width: 2.4rem;
+  margin-top: 0.4rem;
+
+  @include up($bp-sm) {
+    width: 2.9rem;
+    margin-top: 0.45rem;
+  }
+}
+
+// ---------- the dialog ----------
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-overlay, 30) + 5);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background:
+    radial-gradient(70% 60% at 50% 40%, color-mix(in srgb, var(--seal-c) 10%, transparent), transparent 70%),
+    rgba(255, 255, 255, 0.78);
+  -webkit-backdrop-filter: blur(10px) saturate(1.2);
+  backdrop-filter: blur(10px) saturate(1.2);
+}
+
+:global([data-theme='cinema']) .backdrop {
+  background:
+    radial-gradient(70% 60% at 50% 40%, color-mix(in srgb, var(--seal-c) 18%, transparent), transparent 70%),
+    rgba(8, 8, 8, 0.82);
+}
+
+.dialog {
+  display: grid;
+  place-items: center;
+  min-height: 100%;
+  padding: calc(var(--space-6) + env(safe-area-inset-top)) var(--space-3) var(--space-6);
+  outline: none;
+
+  > .scene,
+  > .paperWrap {
+    grid-area: 1 / 1;
+  }
+}
+
+.close {
+  position: fixed;
+  top: calc(var(--space-3) + env(safe-area-inset-top));
+  right: calc(var(--space-3) + env(safe-area-inset-right));
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border-radius: 50%;
+  color: var(--text);
+  cursor: pointer;
+  @include glass;
+  transition: transform var(--dur-base) var(--ease-out);
+
+  &:hover {
+    transform: rotate(90deg);
+  }
+
+  &:focus-visible {
+    @include focus-ring;
+  }
+}
+
+// seal-break scene
+.scene {
+  width: min(20rem, 76vw);
+  margin-top: 18vh;
+  align-self: start;
+}
+
+.sceneEnvelope {
+  position: relative;
+  aspect-ratio: 3 / 2;
+
+  > div {
+    position: absolute;
+  }
+}
+
+.sceneBack {
+  @extend .envBack;
+}
+
+.sceneSheet {
+  left: 7%;
+  right: 7%;
+  top: 6%;
+  height: 88%;
+  z-index: 2;
+  border-radius: 3px;
+  background: repeating-linear-gradient(180deg, transparent 0 11px, rgba(138, 106, 20, 0.12) 11px 12px) 50% 24% / 70% 46% no-repeat,
+    #fffdf7;
+  box-shadow: 0 2px 8px rgba(107, 78, 14, 0.25);
+}
+
+.scenePocket {
+  @extend .envPocket;
+}
+
+.sceneFlap {
+  @extend .envFlap;
+}
+
+.sceneSeal {
+  left: 50%;
+  top: 64%;
+  z-index: 5;
+  width: 26%;
+  aspect-ratio: 1;
+  margin: -13% 0 0 -13%;
+}
+
+.sealHalf {
+  position: absolute;
+  inset: 0;
+
+  svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 3px 3px rgba(60, 8, 18, 0.35));
+  }
+}
+
+// the letter
+.paperWrap {
+  width: min(36rem, 100%);
+  filter: drop-shadow(0 22px 30px rgba(107, 78, 14, 0.22)) drop-shadow(0 2px 3px rgba(107, 78, 14, 0.16));
+}
+
+.paper {
+  // paper stays paper in every theme: its own ink and gold
+  --text: #5c420b;
+  --text-muted: #7a5a12;
+  --gold-1: #6b4e0e;
+  --gold-2: #c9a227;
+  --gold-3: #f4e3a1;
+  --gold-4: #8a6a14;
+  --gold-glow: rgba(201, 162, 39, 0.45);
+  --gold-gradient: linear-gradient(100deg, var(--gold-1) 0%, var(--gold-4) 34%, var(--gold-2) 50%, var(--gold-4) 66%, var(--gold-1) 100%);
+
+  padding: clamp(2rem, 1.4rem + 3vw, 3.4rem) clamp(1.4rem, 0.8rem + 4vw, 3.4rem) clamp(2.2rem, 1.6rem + 3vw, 3.4rem);
+  color: var(--text);
+  background:
+    radial-gradient(120% 90% at 50% 35%, #fffdf7 55%, #f5e8c9 100%),
+    #fffaf0;
+}
+
+.paperSeal {
+  display: block;
+  width: 2.8rem;
+  height: 2.8rem;
+  margin: 0 auto var(--space-3);
+  filter: drop-shadow(0 2px 2px rgba(60, 8, 18, 0.3));
+}
+
+.letterTitle {
+  margin-bottom: var(--space-4);
+  padding-bottom: 0.1em;
+  font-family: 'Fraunces', Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(1.9rem, 1.4rem + 2.4vw, 2.8rem);
+  line-height: 1.1;
+  text-align: center;
+  text-wrap: balance;
+  @include gold-text;
+  @include gold-shimmer(6s);
+}
+
+.letterBody {
+  font-family: 'Fraunces', Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-size: clamp(1.08rem, 1rem + 0.35vw, 1.24rem);
+  line-height: 1.78;
+  text-wrap: pretty;
+
+  > * + * {
+    margin-top: 0.85em;
+  }
+
+  ul,
+  ol {
+    margin-block: 0.85em 0;
+    padding-left: 1.4em;
+  }
+
+  li + li {
+    margin-top: 0.25em;
+  }
+
+  li::marker {
+    color: var(--seal-c);
+  }
+
+  blockquote {
+    margin-inline: 0;
+    padding-left: 1em;
+    border-left: 2px solid color-mix(in srgb, #c9a227 60%, transparent);
+    color: var(--text-muted);
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-style: normal;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  h1 {
+    font-size: 1.45em;
+  }
+
+  h2 {
+    font-size: 1.3em;
+  }
+
+  h3 {
+    font-size: 1.12em;
+  }
+
+  strong {
+    font-weight: 600;
+  }
+
+  a {
+    color: color-mix(in srgb, var(--seal-c) 80%, #000);
+    text-decoration-color: color-mix(in srgb, #c9a227 70%, transparent);
+    text-underline-offset: 0.18em;
+  }
+
+  // a gold flourish to close the letter
+  &::after {
+    content: '';
+    display: block;
+    width: 6rem;
+    height: 1px;
+    margin: var(--space-5) auto 0;
+    background: linear-gradient(90deg, transparent, #c9a227, transparent);
+  }
+}

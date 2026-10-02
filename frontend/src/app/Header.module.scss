@@ -1,5 +1,4 @@
 @use '../styles/mixins' as *;
-@use '../styles/typography' as *;
 
 .header {
   position: fixed;
@@ -7,7 +6,7 @@
   z-index: var(--z-header);
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   height: var(--header-h);
   padding: env(safe-area-inset-top) max(var(--space-4), env(safe-area-inset-right)) 0 max(var(--space-4), env(safe-area-inset-left));
   pointer-events: none;
@@ -18,37 +17,5 @@
 
   @include up($bp-md) {
     padding-inline: var(--space-6);
-  }
-}
-
-.brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  @include display-type(1.35rem);
-  line-height: 1;
-}
-
-.heart {
-  width: 0.95em;
-  height: 0.95em;
-  color: var(--accent);
-  filter: drop-shadow(0 0 8px var(--glow));
-  animation: beat 2.6s var(--ease-in-out) infinite;
-}
-
-@keyframes beat {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  12% {
-    transform: scale(1.18);
-  }
-  24% {
-    transform: scale(1);
-  }
-  36% {
-    transform: scale(1.1);
   }
 }

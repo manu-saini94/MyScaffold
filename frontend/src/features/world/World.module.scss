@@ -1,0 +1,478 @@
+@use '../../styles/mixins' as *;
+@use '../../styles/typography' as *;
+
+// Gold display text. Static gradient plus a slow brightness glint (filter only, per the motion rules).
+@mixin gold-display {
+  background: var(--world-gold-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: glint 7s ease-in-out infinite;
+
+  @include reduced-motion {
+    animation: none;
+  }
+}
+
+@keyframes glint {
+  0%,
+  100% {
+    filter: brightness(1) drop-shadow(0 0 0 transparent);
+  }
+  50% {
+    filter: brightness(1.14) drop-shadow(0 0 10px rgba(244, 227, 161, 0.35));
+  }
+}
+
+@keyframes sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+// ---------- frame ----------
+
+.frame {
+  // the contract for layouts (see worlds/types.ts); --world-accent comes inline from themeAccent when valid
+  --world-accent: var(--accent);
+  --world-accent-soft: color-mix(in srgb, var(--world-accent) 12%, transparent);
+  --world-accent-glow: color-mix(in srgb, var(--world-accent) 34%, transparent);
+  --world-ink: #7a5a12;
+  --world-ink-muted: #8c6d2a;
+  --world-gold-gradient: linear-gradient(100deg, #6b4e0e 0%, #a37c18 28%, #c9a227 45%, #e9cf7a 58%, #8a6a14 80%, #6b4e0e 100%);
+
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  outline: none; // focused programmatically on arrival
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  color: var(--world-ink);
+  background:
+    radial-gradient(80% 50% at 100% 0%, var(--world-accent-soft), transparent 70%),
+    radial-gradient(60% 45% at 0% 100%, rgba(201, 162, 39, 0.1), transparent 70%),
+    var(--bg);
+}
+
+:global([data-theme='cinema']) .frame {
+  --world-ink: #e6c66e;
+  --world-ink-muted: #b89b55;
+  --world-gold-gradient: linear-gradient(100deg, #b8891c 0%, #f4e3a1 40%, #ffd86b 55%, #c9a227 100%);
+}
+
+// Konami "midnight" easter egg (features/easter-eggs): the frame pins its own ink, so re-point it for the night sky.
+:global(:root[data-midnight='true']) .frame {
+  --world-ink: #f2dc9b;
+  --world-ink-muted: #cdb877;
+  --world-gold-gradient: linear-gradient(100deg, #d9b45a 0%, #fffbe8 40%, #f6e3a6 55%, #e6c56f 100%);
+}
+
+.inner {
+  min-height: 100%;
+  padding: var(--space-3) 0 var(--space-7);
+}
+
+.bar {
+  position: sticky;
+  top: var(--space-3); // level with the header's theme toggle
+  z-index: 5;
+  padding: 0 var(--space-4);
+  margin-bottom: var(--space-4);
+  pointer-events: none;
+
+  @include up($bp-md) {
+    padding-inline: var(--space-6);
+  }
+}
+
+.back {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 1rem 0.5rem 0.75rem;
+  border-radius: 999px;
+  color: var(--world-ink);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none;
+  @include glass;
+  transition:
+    transform var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
+
+  svg {
+    transition: transform var(--dur-base) var(--ease-out);
+  }
+
+  &:hover {
+    box-shadow: 0 8px 24px -10px var(--world-accent-glow);
+
+    svg {
+      transform: translateX(-3px);
+    }
+  }
+
+  &:active {
+    transform: scale(0.97);
+  }
+
+  &:focus-visible {
+    @include focus-ring;
+  }
+}
+
+// ---------- shared bits ----------
+
+.eyebrow {
+  @include eyebrow;
+  color: var(--world-ink-muted);
+}
+
+.sub {
+  font-size: 1.05rem;
+  color: var(--world-ink);
+  max-width: 34rem;
+  text-wrap: pretty;
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.6rem 1.4rem;
+  border: 1px solid color-mix(in srgb, #c9a227 55%, transparent);
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.6), rgba(244, 227, 161, 0.28));
+  color: var(--world-ink);
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 26px -12px rgba(138, 106, 20, 0.55);
+  }
+
+  &:active {
+    transform: scale(0.97);
+  }
+
+  &:focus-visible {
+    @include focus-ring;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: progress;
+  }
+}
+
+:global([data-theme='cinema']) .cta {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(201, 162, 39, 0.16));
+}
+
+.srOnly {
+  @include visually-hidden;
+}
+
+// ---------- loading / error ----------
+
+.loading {
+  display: grid;
+  place-items: center;
+  min-height: 50vh;
+}
+
+.loadingLine {
+  position: relative;
+  width: 9rem;
+  height: 2px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: rgba(201, 162, 39, 0.18);
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, #c9a227, transparent);
+    animation: sweep 1.3s var(--ease-in-out) infinite;
+  }
+
+  @include reduced-motion {
+    &::after {
+      animation: none;
+      opacity: 0.6;
+    }
+  }
+}
+
+.notice {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  min-height: 60vh;
+  gap: var(--space-4);
+  padding: var(--space-7) var(--space-4);
+  text-align: center;
+}
+
+.noticeTitle {
+  @include display-type(clamp(1.6rem, 1.2rem + 2vw, 2.4rem));
+  @include gold-display;
+}
+
+// ---------- intro ----------
+
+.intro {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: var(--space-3);
+  min-height: calc(100dvh - var(--space-7) - 3rem);
+  padding: var(--space-5) var(--space-4);
+  text-align: center;
+  cursor: pointer;
+}
+
+.introTitle {
+  @include display-type(clamp(2.8rem, 1.4rem + 6.5vw, 6.2rem));
+  @include gold-display;
+  padding-bottom: 0.08em; // room for descenders under background-clip
+  max-width: 16ch;
+}
+
+.tagline {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: clamp(1.1rem, 1rem + 0.6vw, 1.4rem);
+  color: var(--world-ink);
+}
+
+.introText {
+  max-width: 34rem;
+  margin-top: var(--space-2);
+  line-height: 1.65;
+  color: var(--world-ink);
+  text-wrap: pretty;
+}
+
+.skip {
+  margin-top: var(--space-5);
+  padding: 0.45rem 1rem;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--world-ink-muted);
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--world-ink);
+  }
+
+  &:focus-visible {
+    @include focus-ring;
+  }
+}
+
+// ---------- story ----------
+
+.head {
+  display: grid;
+  gap: var(--space-2);
+  width: min(100%, 72rem);
+  margin: 0 auto var(--space-5);
+  padding: 0 var(--space-4);
+
+  @include up($bp-md) {
+    padding-inline: var(--space-6);
+  }
+}
+
+.title {
+  @include display-type(clamp(2.1rem, 1.3rem + 3.6vw, 4rem));
+  @include gold-display;
+  padding-bottom: 0.08em;
+}
+
+.layoutLoading {
+  min-height: 40vh;
+}
+
+// ---------- outro ----------
+
+.outro {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-4);
+  width: min(100% - 2 * var(--space-4), 40rem);
+  margin: var(--space-6) auto 0;
+  text-align: center;
+  scroll-margin-top: calc(var(--header-h) + var(--space-5));
+}
+
+.flourish {
+  width: 7rem;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #c9a227, transparent);
+}
+
+.outroText {
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 1.05rem + 1vw, 1.75rem);
+  line-height: 1.45;
+  color: var(--world-ink);
+  text-wrap: balance;
+}
+
+.next {
+  position: relative;
+  display: grid;
+  gap: 0.3rem;
+  justify-items: center;
+  min-width: min(100%, 20rem);
+  padding: var(--space-4) var(--space-5);
+  border-radius: calc(var(--radius) * 1.2);
+  overflow: hidden;
+  color: var(--world-ink);
+  text-decoration: none;
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.85), var(--world-accent-soft));
+  border: 1px solid color-mix(in srgb, #c9a227 45%, transparent);
+  box-shadow: 0 18px 40px -22px var(--world-accent-glow);
+  transition:
+    transform var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 24px 46px -20px var(--world-accent-glow);
+  }
+
+  &:focus-visible {
+    @include focus-ring;
+  }
+
+  &[data-locked] {
+    @include glass;
+
+    .nextTitle {
+      filter: blur(0.6px);
+      opacity: 0.8;
+    }
+  }
+}
+
+:global([data-theme='cinema']) .next {
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.05), var(--world-accent-soft));
+}
+
+.nextLabel {
+  @include eyebrow;
+  color: var(--world-ink-muted);
+}
+
+.nextTitle {
+  @include display-type(clamp(1.4rem, 1.1rem + 1.4vw, 2rem));
+  @include gold-display;
+}
+
+.nextLock {
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+// ---------- locked teaser ----------
+
+.teaser {
+  display: grid;
+  place-items: center;
+  min-height: calc(100dvh - var(--space-7) - 3rem);
+  padding: var(--space-4);
+}
+
+.frost {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  width: min(100%, 34rem);
+  padding: var(--space-6) var(--space-5);
+  border-radius: calc(var(--radius) * 1.6);
+  text-align: center;
+  @include glass;
+  box-shadow: 0 30px 70px -30px var(--world-accent-glow);
+
+  // soft accent haze behind the glass
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -30%;
+    z-index: -1;
+    background:
+      radial-gradient(40% 40% at 30% 30%, var(--world-accent-glow), transparent 70%),
+      radial-gradient(40% 40% at 75% 70%, rgba(201, 162, 39, 0.3), transparent 70%);
+    filter: blur(30px);
+  }
+}
+
+.teaserTitle {
+  @include display-type(clamp(2.2rem, 1.4rem + 4vw, 3.8rem));
+  @include gold-display;
+  padding-bottom: 0.08em;
+}
+
+.countdown {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+
+  @include up($bp-sm) {
+    gap: var(--space-3);
+  }
+}
+
+.unit {
+  display: grid;
+  justify-items: center;
+  min-width: 3.7rem;
+  padding: var(--space-2) var(--space-2) 0.4rem;
+  border-radius: calc(var(--radius) * 0.6);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.75), rgba(244, 227, 161, 0.3));
+  border: 1px solid color-mix(in srgb, #c9a227 35%, transparent);
+}
+
+:global([data-theme='cinema']) .unit {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.06), rgba(201, 162, 39, 0.14));
+}
+
+.digits {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 1.2rem + 1.4vw, 2.1rem);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  @include gold-display;
+}
+
+.unitName {
+  font-size: 0.6rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--world-ink-muted);
+}
+
+.when {
+  font-size: 0.9rem;
+  color: var(--world-ink-muted);
+  margin-bottom: var(--space-3);
+}

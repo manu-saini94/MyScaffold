@@ -1,0 +1,80 @@
+@use '../../styles/mixins' as *;
+
+.layout {
+  width: min(100%, 72rem);
+  margin: 0 auto;
+  padding: 0 var(--space-4);
+
+  @include up($bp-md) {
+    padding-inline: var(--space-6);
+  }
+}
+
+// masonry-like columns keep each photo's true aspect ratio
+.grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  columns: 2;
+  column-gap: var(--space-3);
+
+  @include up($bp-md) {
+    columns: 3;
+    column-gap: var(--space-4);
+  }
+}
+
+.cell {
+  break-inside: avoid;
+  margin-bottom: var(--space-4);
+}
+
+.tile {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: calc(var(--radius) * 0.7);
+  overflow: hidden;
+  background: none;
+  cursor: zoom-in;
+  box-shadow:
+    0 1px 2px rgba(60, 40, 10, 0.08),
+    0 14px 30px -14px var(--world-accent-glow, rgba(0, 0, 0, 0.3));
+  transition:
+    transform var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
+
+  &:hover {
+    transform: translateY(-3px);
+  }
+
+  &:active {
+    transform: scale(0.985);
+  }
+
+  &:focus-visible {
+    @include focus-ring;
+  }
+
+  @include reduced-motion {
+    transition: none;
+
+    &:hover,
+    &:active {
+      transform: none;
+    }
+  }
+}
+
+.caption {
+  margin-top: var(--space-2);
+  padding-inline: var(--space-1);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: var(--world-ink, var(--text));
+}
+
+.end {
+  height: 1px;
+}

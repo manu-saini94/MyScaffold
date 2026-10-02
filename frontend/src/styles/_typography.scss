@@ -1,16 +1,53 @@
+// Gold fill for display text: var(--gold-gradient) clipped to the glyphs, solid var(--text) where background-clip:text is
+// unsupported. `-webkit-text-fill-color` (not `color`) carries the transparency, so a
+// module that sets `color: var(--text)` after the include keeps the gradient and still owns currentColor for icons.
+@mixin gold-text {
+  color: var(--text);
+
+  @supports ((-webkit-background-clip: text) or (background-clip: text)) {
+    background-image: var(--gold-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+}
+
+// Slow glint: a brightness lift with a soft gold halo. Filter only, so it stays on the compositor.
+// The global reduced-motion rule in global.scss collapses it to a single frame.
+@mixin gold-shimmer($duration: 5.5s, $delay: 0s) {
+  animation: gold-glint $duration var(--ease-in-out) $delay infinite;
+
+  @at-root {
+    @keyframes gold-glint {
+      0%,
+      100% {
+        filter: brightness(1) drop-shadow(0 0 0 transparent);
+      }
+      45% {
+        filter: brightness(1.2) drop-shadow(0 0 5px var(--gold-glow));
+      }
+      55% {
+        filter: brightness(1.28) drop-shadow(0 0 9px var(--gold-glow));
+      }
+    }
+  }
+}
+
 @mixin display-type($size: clamp(2rem, 1.2rem + 3.2vw, 3.6rem)) {
   font-family: var(--font-display);
   font-weight: var(--display-weight);
   letter-spacing: var(--display-tracking);
   font-size: $size;
-  line-height: 1.04;
+  line-height: 1.08;
   text-wrap: balance;
+  @include gold-text;
+  @include gold-shimmer;
 }
 
 @mixin eyebrow {
   font-family: var(--font-body);
   font-size: 0.72rem;
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--text-muted);

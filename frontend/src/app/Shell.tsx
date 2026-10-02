@@ -1,7 +1,10 @@
 import type { ReactNode } from 'react'
 import { useLocation, useOutlet } from 'react-router-dom'
 import { AnimatePresence } from 'motion/react'
+import { ClickEffects } from '../components/ClickEffects/ClickEffects'
 import { Particles } from '../components/Particles/Particles'
+import { EasterEggs } from '../features/easter-eggs'
+import { useGetExperienceQuery } from '../services/experienceApi'
 import { RoseDecor } from '../components/Rose/RoseDecor'
 import { Launcher } from '../features/launcher/Launcher'
 import { useDefaultTheme } from '../features/theme/useDefaultTheme'
@@ -19,11 +22,14 @@ export function Shell() {
   const kind = useParticleKind()
   const location = useLocation()
   const outlet = useOutlet()
+  const nicknames = useGetExperienceQuery().data?.easterEggNicknames
 
   return (
     <>
       <RoseDecor />
       <Particles kind={kind} />
+      <ClickEffects />
+      <EasterEggs nicknames={nicknames ?? []} />
       <Header />
       <Launcher active={!outlet} />
       <AnimatePresence>{outlet && <Frozen key={location.pathname}>{outlet}</Frozen>}</AnimatePresence>

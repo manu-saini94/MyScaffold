@@ -38,7 +38,7 @@ describe('applyTheme', () => {
 
     applyTheme('rose')
     expect(document.documentElement.dataset.theme).toBe('rose')
-    expect(meta().content).toBe('#fdfaf6')
+    expect(meta().content).toBe('#ffffff')
     expect(localStorage.getItem('our-story-theme')).toBe('rose')
   })
 

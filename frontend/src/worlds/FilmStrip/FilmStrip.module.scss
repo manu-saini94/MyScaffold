@@ -1,0 +1,459 @@
+@use '../../styles/mixins' as *;
+@use '../../styles/typography' as *;
+
+// rounded sprocket hole, used as a mask so the holes show the page colour through the film
+$hole: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='12'%3E%3Crect x='5' y='0' width='12' height='12' rx='2.6' fill='%23000'/%3E%3C/svg%3E");
+// static film grain: sparse light specks from fractal noise
+$grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='170' height='170'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .93 0 0 0 0 .8 1.7 0 0 0 -.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+$mono: ui-monospace, 'Cascadia Mono', 'SFMono-Regular', Menlo, Consolas, 'Courier New', monospace;
+$edge-ink: #f2a541;
+
+.reel {
+  --h: clamp(10.5rem, min(44dvh, 60vw), 25rem); // photo height
+  --band: 34px; // film edge above and below the photo
+  --gap: 14px; // film between two frames
+  --film: #15100a;
+
+  position: relative;
+}
+
+.stage {
+  position: sticky;
+  top: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr); // the strip must not widen the stage to its full length
+  align-content: center;
+  justify-items: center;
+  gap: var(--space-3);
+  height: 100dvh;
+  padding-top: 3rem; // clear of the shell's back control
+
+  [data-reduced] > & {
+    position: static;
+    height: auto;
+    padding-top: 0;
+  }
+}
+
+.window {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  overflow: clip;
+  padding-block: var(--space-3);
+
+  [data-reduced] & {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+}
+
+.track {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  width: max-content;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  will-change: transform;
+
+  [data-reduced] & {
+    will-change: auto;
+  }
+}
+
+// ---------- film ----------
+
+.film {
+  position: relative;
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: var(--band) calc(var(--gap) / 2);
+  border: 0;
+  border-radius: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 220, 160, 0.07), transparent 18%, transparent 82%, rgba(255, 220, 160, 0.07)),
+    linear-gradient(180deg, #2a1c0e 0%, var(--film) 14%, var(--film) 86%, #2a1c0e 100%);
+  color: $edge-ink;
+  cursor: zoom-in;
+  -webkit-tap-highlight-color: transparent;
+
+  // sprocket rows, top and bottom
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 12px;
+    background: var(--hole, var(--bg, #fff));
+    mask: $hole repeat-x 0 0 / 22px 12px;
+    -webkit-mask: $hole repeat-x 0 0 / 22px 12px;
+    pointer-events: none;
+  }
+
+  &::before {
+    top: 7px;
+  }
+
+  &::after {
+    bottom: 7px;
+  }
+
+  &:focus-visible {
+    outline: none;
+
+    .photo {
+      outline: 2px solid var(--gold-3);
+      outline-offset: 3px;
+    }
+  }
+}
+
+.leader,
+.tail {
+  flex: none;
+  // wide enough that the first / last frame can sit in the middle of the window
+  width: max(3rem, calc(50vw - var(--h) * var(--edge-ar, 1.4) / 2 - var(--gap) / 2));
+  height: calc(var(--h) + 2 * var(--band));
+  cursor: default;
+}
+
+// the film fades into the page at both ends of the roll
+.leader {
+  mask-image: linear-gradient(90deg, transparent, #000 55%);
+}
+
+.tail {
+  mask-image: linear-gradient(270deg, transparent, #000 55%);
+}
+
+.leaderText {
+  position: absolute;
+  right: 1.2rem;
+  top: 50%;
+  translate: 0 -50%;
+  max-width: 80%;
+  overflow: hidden;
+  font-family: $mono;
+  font-size: 0.7rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.7;
+}
+
+.end {
+  position: absolute;
+  left: 30%;
+  top: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.cell {
+  flex: none;
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  width: calc(var(--h) * var(--ar) + var(--gap));
+  scroll-snap-align: center;
+}
+
+.photo {
+  position: relative;
+  display: block;
+  height: var(--h);
+  overflow: hidden;
+  border-radius: 3px;
+  background: #0b0805;
+  box-shadow: inset 0 0 0 1px rgba(255, 230, 190, 0.08);
+
+  // projector warmth over the print
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(30, 14, 0, 0.32)),
+      linear-gradient(160deg, rgba(255, 196, 120, 0.1), transparent 45%);
+    pointer-events: none;
+  }
+}
+
+.img {
+  height: 100%;
+  min-height: 0;
+  transition: transform var(--dur-slow) var(--ease-out);
+
+  .film:hover &,
+  .film:focus-visible & {
+    transform: scale(1.035);
+  }
+
+  @include reduced-motion {
+    transition: none;
+
+    .film:hover &,
+    .film:focus-visible & {
+      transform: none;
+    }
+  }
+}
+
+.grain {
+  position: absolute;
+  inset: 0;
+  background: $grain 0 0 / 170px 170px;
+  opacity: 0.22;
+  pointer-events: none;
+}
+
+// date-back camera stamp
+.stamp {
+  position: absolute;
+  right: 7%;
+  bottom: 6%;
+  z-index: 1;
+  font-family: $mono;
+  font-size: clamp(0.62rem, 0.5rem + 0.45vw, 0.86rem);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: #ffab2e;
+  text-shadow:
+    0 0 2px rgba(255, 140, 0, 0.95),
+    0 0 9px rgba(255, 96, 0, 0.6);
+  opacity: 0.92;
+}
+
+%edge-print {
+  position: absolute;
+  font-family: $mono;
+  font-size: 9px;
+  line-height: 1;
+  letter-spacing: 0.18em;
+  color: $edge-ink;
+  opacity: 0.8;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.edgeTop {
+  @extend %edge-print;
+  top: 21px;
+  left: 12px;
+  opacity: 0.55;
+}
+
+.edgeLeft {
+  @extend %edge-print;
+  bottom: 21px;
+  left: 12px;
+}
+
+.edgeRight {
+  @extend %edge-print;
+  bottom: 21px;
+  right: 12px;
+  opacity: 0.6;
+}
+
+.caption {
+  max-width: calc(var(--h) * var(--ar));
+  margin: 0;
+  padding-inline: var(--space-1);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: clamp(0.9rem, 0.84rem + 0.3vw, 1.05rem);
+  line-height: 1.35;
+  text-align: center;
+  text-wrap: balance;
+  color: var(--world-ink);
+}
+
+// rare warm light leak across the film (opacity only)
+.leak {
+  position: absolute;
+  inset-inline: 0;
+  top: var(--space-3);
+  height: calc(var(--h) + 2 * var(--band));
+  background:
+    radial-gradient(38% 90% at 0% 45%, rgba(255, 118, 40, 0.6), transparent 70%),
+    radial-gradient(26% 70% at 9% 75%, rgba(255, 206, 110, 0.5), transparent 70%),
+    radial-gradient(20% 60% at 100% 20%, rgba(255, 90, 60, 0.3), transparent 70%);
+  opacity: 0;
+  pointer-events: none;
+  animation: leak 15s linear 5s infinite;
+
+  @include reduced-motion {
+    display: none;
+  }
+}
+
+@keyframes leak {
+  0%,
+  86%,
+  100% {
+    opacity: 0;
+  }
+  87.5% {
+    opacity: 0.7;
+  }
+  89% {
+    opacity: 0.25;
+  }
+  90.5% {
+    opacity: 0.55;
+  }
+  94% {
+    opacity: 0;
+  }
+}
+
+// ---------- controls ----------
+
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+}
+
+.arrow {
+  display: grid;
+  place-items: center;
+  width: 2.9rem;
+  height: 2.9rem;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--gold-2) 50%, transparent);
+  border-radius: 50%;
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.85), color-mix(in srgb, var(--gold-3) 40%, transparent));
+  color: var(--world-ink);
+  cursor: pointer;
+  transition:
+    transform var(--dur-base) var(--ease-out),
+    opacity var(--dur-base) ease;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.94);
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+
+  &:focus-visible {
+    @include focus-ring;
+  }
+
+  @include reduced-motion {
+    transition: opacity var(--dur-base) ease;
+
+    &:hover:not(:disabled),
+    &:active:not(:disabled) {
+      transform: none;
+    }
+  }
+}
+
+:global([data-theme='cinema']) .reel {
+  // projector light through the holes, and a faint gold rim on the film
+  --hole: color-mix(in srgb, var(--gold-3) 30%, var(--bg));
+}
+
+:global([data-theme='cinema']) .film {
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--gold-2) 30%, transparent),
+    inset 0 -1px 0 color-mix(in srgb, var(--gold-2) 30%, transparent);
+}
+
+:global([data-theme='cinema']) .arrow {
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.08), rgba(201, 162, 39, 0.18));
+}
+
+.meter {
+  display: grid;
+  justify-items: center;
+  gap: 0.45rem;
+  min-width: 7.5rem;
+}
+
+.counter {
+  margin: 0;
+  font-family: $mono;
+  font-size: 0.85rem;
+  letter-spacing: 0.22em;
+  color: var(--world-ink-muted);
+
+  strong {
+    font-size: 1.15rem;
+    font-weight: 700;
+    @include gold-text;
+  }
+}
+
+.line {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 2px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--gold-2) 22%, transparent);
+}
+
+.lineFill {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--gold-4), var(--gold-2), var(--gold-3));
+  transform-origin: 0 50%;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--world-ink-muted);
+}
+
+.srOnly {
+  @include visually-hidden;
+}
+
+// ---------- empty ----------
+
+.empty {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-4);
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.1rem;
+  color: var(--world-ink);
+}
+
+.emptyFilm {
+  --film: #15100a;
+  --band: 0px;
+
+  width: min(18rem, 70vw);
+  height: 4.5rem;
+  mask-image: linear-gradient(90deg, transparent, #000 30%, #000 70%, transparent);
+}

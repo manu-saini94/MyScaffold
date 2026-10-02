@@ -17,6 +17,9 @@ export interface WorldList {
   /** The load failed and there is nothing to show. */
   isError: boolean
   refetch: () => void
+  /** Hero title and tagline from the same payload (null until it loads). */
+  appTitle: string | null
+  tagline: string | null
 }
 
 /**
@@ -36,7 +39,14 @@ export function useWorldList(): WorldList {
     return () => window.clearTimeout(id)
   }, [worlds, refetch])
 
-  return { worlds, loading: isLoading, isError: isError && !data, refetch: () => void refetch() }
+  return {
+    worlds,
+    loading: isLoading,
+    isError: isError && !data,
+    refetch: () => void refetch(),
+    appTitle: data?.appTitle ?? null,
+    tagline: data?.tagline ?? null,
+  }
 }
 
 export function useWorlds(): readonly World[] {

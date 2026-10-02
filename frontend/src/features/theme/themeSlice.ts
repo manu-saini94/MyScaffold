@@ -20,7 +20,7 @@ export function hasStoredTheme(): boolean {
 /** Writes the theme to <html> and localStorage. Safe if storage is blocked. */
 export function applyTheme(theme: ThemeName): void {
   document.documentElement.dataset.theme = theme
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'rose' ? '#fdfaf6' : '#141414')
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'rose' ? '#ffffff' : '#141414')
   try {
     localStorage.setItem(STORAGE_KEY, theme)
   } catch {

@@ -22,7 +22,11 @@ export default defineConfig({
       reporter: ['text', 'html'],
       // logic only: rendering shells (tsx views, scss) are covered by the Playwright screenshot pass
       include: [
-        'src/features/launcher/{hexLayout,fisheye,fieldEngine,countdown,mapExperience,useWorlds,worldsMock,HoneycombField}.{ts,tsx}',
+        'src/features/launcher/{scatter,progress,orbContent,countdown,mapExperience,useWorlds,OrbField,WorldOrb}.{ts,tsx}',
+        'src/components/ClickEffects/burstMath.ts',
+        'src/styles/contrast.ts',
+        'src/services/media.ts',
+        'src/features/world/progress.ts',
         'src/features/session/**/*.{ts,tsx}',
         'src/features/unlock/**/*.{ts,tsx}',
         'src/features/profiles/**/*.{ts,tsx}',

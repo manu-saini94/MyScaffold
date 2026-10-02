@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom'
+import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
 import { ProfileGate } from '../features/profiles/ProfileGate'
 import { SessionGate } from '../features/session/SessionGate'
 import { UnlockScreen } from '../features/unlock/UnlockScreen'
@@ -44,6 +44,18 @@ export const router = createBrowserRouter([
         lazy: async () => ({ Component: (await preloadWorld()).default }),
       },
     ],
+  },
+  {
+    // "Play our story": same guard as the home, but a full-screen sibling of it rather than a child of Shell, so the
+    // home's chrome (header, roses, particles, orbs, click bursts) is not mounted and animating underneath. Lazy chunk.
+    path: '/story',
+    element: (
+      <SessionGate route="app">
+        <Outlet />
+      </SessionGate>
+    ),
+    HydrateFallback: () => null,
+    children: [{ index: true, lazy: async () => ({ Component: (await import('../features/story/StoryRoute')).default }) }],
   },
   {
     // The admin is a Google session, not a viewer session: outside SessionGate, and its own lazy chunk.

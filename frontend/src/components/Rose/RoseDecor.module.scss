@@ -1,4 +1,9 @@
+// Rose clusters: fixed behind every screen (--z-decor), never interactive, cheap (SVG + transform-only sway).
 .decor {
+  --rose-unit: clamp(44px, 12.5vw, 96px);
+  // phones: the top garland stays small so it frames the hero title instead of crowding it
+  --top-unit: clamp(32px, 8.5vw, 96px);
+
   position: fixed;
   inset: 0;
   z-index: var(--z-decor);
@@ -8,33 +13,62 @@
   transition: opacity var(--dur-slow) var(--ease-out);
 }
 
-.topLeft,
-.bottomRight {
+.item {
   position: absolute;
+  width: calc(var(--rose-unit) * var(--w));
+  line-height: 0;
+}
+
+// Stems stand on the bottom edge (their last few px tucked below it) and lean from their base.
+.bottom {
+  bottom: 0;
+  transform-origin: 50% 100%;
+  transform: translateY(calc(6% - var(--lift))) rotate(var(--rot)) scaleX(var(--flip));
+
+  .rose {
+    transform-origin: 50% 100%;
+  }
+}
+
+// Garlands hang in from the top corners; blooms peek over the edge.
+.top {
+  top: 0;
+  width: calc(var(--top-unit) * var(--w));
+  transform-origin: 50% 50%;
+  transform: translateY(var(--lift)) scaleX(var(--flip)) rotate(var(--rot));
+
+  .rose {
+    transform-origin: 50% 20%;
+  }
+}
+
+.rose {
+  display: block;
+  width: 100%;
   height: auto;
+  overflow: visible;
+  animation: sway var(--dur) var(--ease-in-out) var(--delay) infinite alternate;
 }
 
-// Sprigs sit in the quiet bands (below the header, below the caption), never behind text.
-.topLeft {
-  top: 7%;
-  left: -9%;
-  transform: scaleX(-1) rotate(-2deg);
-}
-
-.bottomRight {
-  display: none; // phones keep only the top sprig: the caption owns the bottom band
-  right: -3%;
-  bottom: -4%;
-  transform: scaleX(-1);
+.wide {
+  display: none;
 }
 
 @media (min-width: 700px) {
-  .topLeft {
-    top: 6%;
-    left: -3%;
+  .decor {
+    --top-unit: var(--rose-unit);
   }
 
-  .bottomRight {
+  .wide {
     display: block;
+  }
+}
+
+@keyframes sway {
+  from {
+    transform: rotate(-2.4deg);
+  }
+  to {
+    transform: rotate(2.4deg);
   }
 }

@@ -1,0 +1,23 @@
+.field {
+  position: relative;
+  z-index: var(--z-field);
+  flex: 1 1 auto;
+  min-height: 0;
+
+  &[data-scroll] {
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+  }
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+// Orbs are absolutely placed in px from the scatter; the padding offsets them from the field edges.
+.inner {
+  position: relative;
+  margin: var(--pad-top) var(--pad-x) 0;
+}

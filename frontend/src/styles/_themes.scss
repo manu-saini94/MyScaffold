@@ -1,28 +1,42 @@
 // Two themes, one token set. Applied via <html data-theme="rose|cinema">.
+// Text is dark gold on Rose and bright gold on Cinema. Contrast is checked by styles/contrast.test.ts, which parses
+// this file: --text and --text-muted must stay at WCAG AA (4.5:1) against --bg and --surface.
 @mixin theme-rose {
   color-scheme: light;
-  --bg: #fdfaf6;
-  --bg-2: #f7eee8;
+  --bg: #ffffff;
+  --bg-2: #fbf4f5;
   --surface: #ffffff;
-  --surface-glass: rgba(255, 255, 255, 0.72);
-  --text: #2b1218;
-  --text-muted: #7d5c64;
+  --surface-glass: rgba(255, 255, 255, 0.74);
+  --text: #6b4e0e;
+  --text-muted: #8a6a14;
   --accent: #b3122f;
   --accent-2: #e04a63;
-  --glow: rgba(179, 18, 47, 0.26);
-  --line: rgba(179, 18, 47, 0.16);
+  --glow: rgba(179, 18, 47, 0.24);
+  --line: rgba(138, 106, 20, 0.22);
   --radius: 20px;
-  --shadow: 0 1px 2px rgba(80, 20, 30, 0.06), 0 10px 30px -8px rgba(120, 20, 40, 0.22);
-  --shadow-lift: 0 2px 4px rgba(80, 20, 30, 0.08), 0 22px 46px -10px rgba(150, 15, 40, 0.38);
+  --shadow: 0 1px 2px rgba(107, 78, 14, 0.08), 0 10px 30px -8px rgba(120, 20, 40, 0.2);
+  --shadow-lift: 0 2px 4px rgba(107, 78, 14, 0.1), 0 24px 48px -12px rgba(150, 15, 40, 0.34);
   --font-display: 'Fraunces', 'Iowan Old Style', Georgia, serif;
   --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --display-weight: 400;
   --display-tracking: -0.01em;
   --particle-kind: petals;
 
+  // Gold text system: four gradient stops (deep -> warm -> highlight -> antique) and the glint colour.
+  --gold-1: #6b4e0e;
+  --gold-2: #c9a227;
+  --gold-3: #f4e3a1;
+  --gold-4: #8a6a14;
+  --gold-glow: rgba(201, 162, 39, 0.45);
+  // Display gradient (deep -> antique -> warm -> antique -> deep). Used by the gold-text mixin and .gold-display.
+  --gold-gradient: linear-gradient(100deg, var(--gold-1) 0%, var(--gold-4) 34%, var(--gold-2) 50%, var(--gold-4) 66%, var(--gold-1) 100%);
+  // Hero title: rose into gold
+  --romance-1: #b3122f;
+  --romance-2: #e04a63;
+
   // Rose line-art: strokes use --accent; stems and leaves use --leaf-line
-  --leaf-line: rgba(58, 92, 58, 0.55);
-  --decor-opacity: 0.85;
+  --leaf-line: rgba(46, 104, 52, 0.62);
+  --decor-opacity: 1;
 }
 
 @mixin theme-cinema {
@@ -31,12 +45,12 @@
   --bg-2: #0b0b0b;
   --surface: #1f1f1f;
   --surface-glass: rgba(24, 24, 24, 0.66);
-  --text: #f4f1ec;
-  --text-muted: #a2a09b;
+  --text: #f1d58a;
+  --text-muted: #c9a85a;
   --accent: #e50914;
   --accent-2: #ff5a4d;
   --glow: rgba(229, 9, 20, 0.45);
-  --line: rgba(255, 255, 255, 0.1);
+  --line: rgba(241, 213, 138, 0.16);
   --radius: 6px;
   --shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 18px 40px -12px rgba(0, 0, 0, 0.85);
   --shadow-lift: 0 0 0 1px rgba(229, 9, 20, 0.5), 0 0 34px -4px var(--glow), 0 24px 50px -10px rgba(0, 0, 0, 0.9);
@@ -45,6 +59,15 @@
   --display-weight: 800;
   --display-tracking: -0.035em;
   --particle-kind: embers;
+
+  --gold-1: #c9962c;
+  --gold-2: #f1d58a;
+  --gold-3: #fff6d6;
+  --gold-4: #d9ae4a;
+  --gold-glow: rgba(255, 214, 120, 0.5);
+  --gold-gradient: linear-gradient(100deg, var(--gold-1) 0%, var(--gold-2) 34%, var(--gold-3) 50%, var(--gold-2) 66%, var(--gold-4) 100%);
+  --romance-1: #ff3b3b;
+  --romance-2: #ff7a59;
 
   --leaf-line: rgba(0, 0, 0, 0.5);
   --decor-opacity: 0;

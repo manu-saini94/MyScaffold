@@ -1,0 +1,305 @@
+@use '../../styles/mixins' as *;
+@use '../../styles/typography' as *;
+
+// This world is night in both themes: the panel carries its own sky and the bright gold of the dark theme.
+.sky {
+  --gold-1: #c9962c;
+  --gold-2: #f1d58a;
+  --gold-3: #fff6d6;
+  --gold-4: #d9ae4a;
+  --gold-glow: rgba(255, 214, 120, 0.5);
+  --gold-gradient: linear-gradient(100deg, var(--gold-1) 0%, var(--gold-2) 34%, var(--gold-3) 50%, var(--gold-2) 66%, var(--gold-4) 100%);
+  --text: #f1d58a;
+  --star-gold: #ffe6a3;
+
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  width: min(100% - 2 * var(--space-3), 64rem);
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-3) var(--space-6);
+  overflow: hidden;
+  border-radius: 22px;
+  color: var(--text);
+  background:
+    radial-gradient(70% 45% at 78% 12%, rgba(120, 60, 160, 0.35), transparent 70%),
+    radial-gradient(60% 40% at 15% 85%, rgba(179, 18, 47, 0.22), transparent 70%),
+    radial-gradient(90% 60% at 50% 55%, rgba(255, 214, 120, 0.05), transparent 70%),
+    linear-gradient(172deg, #070b24 0%, #121540 38%, #2a1446 72%, #3b1640 100%);
+  box-shadow:
+    0 30px 60px -28px rgba(18, 10, 50, 0.65),
+    inset 0 0 0 1px rgba(241, 213, 138, 0.12);
+
+  @include up($bp-md) {
+    padding: var(--space-6) var(--space-5) var(--space-7);
+    border-radius: 32px;
+  }
+}
+
+.skyCanvas {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.twinkle {
+  animation: twinkle 3.6s ease-in-out infinite alternate;
+}
+
+@keyframes twinkle {
+  0% {
+    opacity: 0.15;
+  }
+  60% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0.4;
+  }
+}
+
+.lead {
+  margin: 0;
+  font-family: 'Fraunces', Georgia, serif;
+  font-style: italic;
+  font-size: clamp(1rem, 0.9rem + 0.5vw, 1.2rem);
+  color: var(--text);
+  text-align: center;
+  opacity: 0.9;
+}
+
+.srOnly {
+  @include visually-hidden;
+}
+
+.empty {
+  min-height: 40vh;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  font-family: 'Fraunces', Georgia, serif;
+  font-style: italic;
+  font-size: 1.2rem;
+  text-align: center;
+}
+
+// ---------- the heart ----------
+
+.heart {
+  position: relative;
+  width: min(100%, 42rem, calc((100dvh - 19rem) * var(--aspect)));
+  min-width: min(100%, 18rem);
+  aspect-ratio: var(--aspect);
+}
+
+.lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.guide {
+  fill: none;
+  stroke: rgba(241, 213, 138, 0.24);
+  stroke-width: 1;
+  stroke-dasharray: 2 10;
+  vector-effect: non-scaling-stroke;
+}
+
+.line {
+  fill: none;
+  stroke: var(--star-gold);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 3px rgba(255, 214, 120, 0.8));
+}
+
+.glow {
+  fill: rgba(224, 74, 99, 0.08);
+  stroke: #fff2c4;
+  stroke-width: 2.4;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 6px rgba(255, 214, 120, 0.9)) drop-shadow(0 0 18px rgba(224, 74, 99, 0.6));
+  animation: heart-glow 3.2s ease-in-out infinite;
+}
+
+@keyframes heart-glow {
+  0%,
+  100% {
+    opacity: 0.75;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.stars {
+  position: absolute;
+  inset: 0;
+  z-index: 2; // stars stay tappable over the photo card
+  pointer-events: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    position: absolute;
+    width: 0;
+    height: 0;
+    pointer-events: auto;
+  }
+}
+
+.star {
+  position: absolute;
+  left: -1.375rem;
+  top: -1.375rem;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--star-gold);
+  cursor: pointer;
+
+  svg {
+    width: 0.95rem;
+    height: 0.95rem;
+    fill: currentColor;
+    opacity: 0.5;
+    transform: scale(0.8);
+    filter: drop-shadow(0 0 2px rgba(255, 236, 190, 0.5));
+    transition:
+      opacity 0.6s var(--ease-out, ease),
+      transform 0.6s var(--ease-out, ease),
+      filter 0.6s ease;
+  }
+
+  &:hover svg {
+    opacity: 0.75;
+    transform: scale(1);
+  }
+
+  &[data-hint] svg {
+    animation: hint 2.2s ease-in-out infinite;
+  }
+
+  &[data-found] svg {
+    opacity: 1;
+    transform: scale(1.35);
+    filter: drop-shadow(0 0 4px rgba(255, 236, 190, 0.95)) drop-shadow(0 0 12px rgba(255, 196, 90, 0.7));
+  }
+
+  &[data-active] svg {
+    transform: scale(1.7);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--star-gold);
+    outline-offset: 0;
+    box-shadow: 0 0 18px 2px rgba(255, 214, 120, 0.45);
+  }
+}
+
+@keyframes hint {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.15);
+  }
+}
+
+// the photo appears inside the heart, below the top cusp
+.card {
+  position: absolute;
+  z-index: 1;
+  left: 50%;
+  top: 54%;
+  width: 27%;
+  margin: 0;
+  translate: -50% -50%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr); // the photo never sizes the card
+  justify-items: center;
+  gap: 0.35rem;
+
+  @include up($bp-md) {
+    top: 56%;
+    width: 30%;
+  }
+}
+
+.photo {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  aspect-ratio: 4 / 5;
+  padding: 4px;
+  border: 0;
+  border-radius: 8px;
+  background: linear-gradient(150deg, #fff6d6, #d9ae4a);
+  box-shadow:
+    0 0 0 1px rgba(255, 246, 214, 0.4),
+    0 0 30px 4px rgba(255, 214, 120, 0.25),
+    0 18px 36px -12px rgba(0, 0, 0, 0.7);
+  cursor: zoom-in;
+
+  &:focus-visible {
+    outline: 2px solid var(--star-gold);
+    outline-offset: 3px;
+  }
+}
+
+.photoImg {
+  height: 100%;
+  min-height: 0;
+  border-radius: 5px;
+}
+
+.caption {
+  font-family: 'Fraunces', Georgia, serif;
+  font-style: italic;
+  font-size: clamp(0.78rem, 0.7rem + 0.4vw, 1rem);
+  line-height: 1.25;
+  text-align: center;
+  color: var(--text);
+  text-shadow: 0 1px 8px rgba(7, 11, 36, 0.9);
+}
+
+.finale {
+  margin: 0;
+  padding-bottom: 0.08em;
+  font-family: 'Fraunces', Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(1.6rem, 1.1rem + 2.4vw, 2.6rem);
+  line-height: 1.15;
+  text-align: center;
+  text-wrap: balance;
+  @include gold-text;
+  @include gold-shimmer(6s);
+}
+
+@include reduced-motion {
+  .twinkle,
+  .glow,
+  .star[data-hint] svg {
+    animation: none;
+  }
+}

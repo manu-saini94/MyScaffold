@@ -31,17 +31,42 @@ function Leaf({ x, y, rot, s = 1 }: { x: number; y: number; rot: number; s?: num
   )
 }
 
+/** Long-stemmed rose standing upright in a 100x240 box: bloom on top, a gently bent stem, two leaves and a thorn. */
+function Stem() {
+  return (
+    <>
+      <g stroke="var(--leaf-line)" strokeWidth="1.3">
+        <path {...LINE} d="M50 84 C47 120 55 150 50 186 C47 208 49 226 50 240" />
+        <path {...LINE} d="M51 138 l5 -4" />
+      </g>
+      <Leaf x={50} y={128} rot={-150} s={0.9} />
+      <Leaf x={50} y={170} rot={-28} s={1.05} />
+      <Bloom />
+    </>
+  )
+}
+
 interface RoseProps {
-  variant?: 'bloom' | 'sprig'
+  variant?: 'bloom' | 'sprig' | 'stem'
   size?: number | string
   className?: string
   style?: CSSProperties
   title?: string
 }
 
-/** Reusable inline-SVG line-art rose. `bloom` = single flower, `sprig` = bloom + bud + leaves on a stem for framing. */
+/**
+ * Reusable inline-SVG line-art rose. `bloom` = single flower, `sprig` = bloom + bud + leaves on a stem for framing,
+ * `stem` = upright long-stemmed rose (`size` is its width; it is 2.4x as tall).
+ */
 export function Rose({ variant = 'bloom', size = 96, className, style, title }: RoseProps) {
   const a11y = title ? { role: 'img' as const, 'aria-label': title } : { 'aria-hidden': true as const }
+  if (variant === 'stem') {
+    return (
+      <svg viewBox="0 0 100 240" width={size} className={className} style={style} {...a11y}>
+        <Stem />
+      </svg>
+    )
+  }
   if (variant === 'bloom') {
     return (
       <svg viewBox="0 0 100 100" width={size} height={size} className={className} style={style} {...a11y}>

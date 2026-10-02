@@ -1,0 +1,43 @@
+// Hidden "midnight" look (Konami code): deep indigo night, starlight-gold text. Global on purpose: it re-points the
+// theme tokens. `:root:root` outranks `:root[data-theme=...]` whichever order the stylesheets load in.
+:root:root[data-midnight='true'] {
+  color-scheme: dark;
+  --bg: #0c0e2a;
+  --bg-2: #080a1f;
+  --surface: #161a44;
+  --surface-glass: rgba(22, 26, 68, 0.62);
+  --text: #f2dc9b;
+  --text-muted: #cdb877;
+  --accent: #ff7a9c;
+  --accent-2: #ffb4c6;
+  --glow: rgba(255, 122, 156, 0.32);
+  --line: rgba(242, 220, 155, 0.18);
+  --gold-1: #d9b45a;
+  --gold-2: #f6e3a6;
+  --gold-3: #fffbe8;
+  --gold-4: #e6c56f;
+  --gold-glow: rgba(255, 236, 170, 0.55);
+  --romance-1: #ff7a9c;
+  --romance-2: #f6e3a6;
+  --leaf-line: rgba(160, 200, 170, 0.45);
+  --decor-opacity: 0.55;
+}
+
+html:root[data-midnight='true'] body {
+  // a scatter of fixed stars, a soft moon glow, and the night itself
+  background:
+    radial-gradient(1.5px 1.5px at 12% 18%, #fff8dc 50%, transparent 51%),
+    radial-gradient(1px 1px at 27% 64%, #fff8dc 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 41% 32%, #f6e3a6 50%, transparent 51%),
+    radial-gradient(1px 1px at 58% 12%, #fff8dc 50%, transparent 51%),
+    radial-gradient(2px 2px at 69% 48%, #f6e3a6 50%, transparent 51%),
+    radial-gradient(1px 1px at 83% 26%, #fff8dc 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 91% 72%, #fff8dc 50%, transparent 51%),
+    radial-gradient(1px 1px at 7% 86%, #f6e3a6 50%, transparent 51%),
+    radial-gradient(1px 1px at 49% 90%, #fff8dc 50%, transparent 51%),
+    radial-gradient(40% 30% at 85% 8%, rgba(246, 227, 166, 0.14), transparent 70%),
+    radial-gradient(90% 70% at 50% 110%, rgba(90, 70, 190, 0.35), transparent 70%),
+    var(--bg);
+}
+
+// The world frame's midnight ink lives in features/world/World.module.scss (scoped to .frame).
