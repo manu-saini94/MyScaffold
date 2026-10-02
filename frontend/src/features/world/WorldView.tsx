@@ -46,7 +46,7 @@ export function WorldView({ world }: { world: World }) {
         </Link>
 
         <header className={styles.head}>
-          <p className={styles.eyebrow}>Chapter {String(world.id).padStart(2, '0')}</p>
+          <p className={styles.eyebrow}>Chapter {String(world.chapter).padStart(2, '0')}</p>
           <h1 id="world-title" className={styles.title}>
             {world.title}
           </h1>

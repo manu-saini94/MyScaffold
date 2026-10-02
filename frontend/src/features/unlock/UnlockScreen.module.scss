@@ -1,0 +1,362 @@
+@use '../../styles/mixins' as *;
+@use '../../styles/typography' as *;
+
+// Screen-local tokens. Cinema's --accent is under 4.5:1 on its background, so small text uses --note.
+.screen {
+  --note: var(--accent);
+  --field-bg: transparent;
+  --field-radius: 0;
+  --heartbeat: 2.8s;
+
+  position: relative;
+  z-index: var(--z-field);
+  display: grid;
+  place-items: center;
+  height: 100dvh;
+  overflow-y: auto;
+  padding: calc(var(--header-h) + var(--space-3)) var(--space-4) var(--space-6);
+
+  :global(:root[data-theme='cinema']) & {
+    --note: var(--accent-2);
+    --field-bg: var(--surface);
+    --field-radius: var(--radius);
+  }
+}
+
+.stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  width: min(100%, 34rem);
+  text-align: center;
+}
+
+.crest {
+  opacity: 0.9;
+  transform: rotate(-8deg);
+
+  :global(:root[data-theme='cinema']) & {
+    width: 2.5rem;
+    height: 2.5rem;
+    filter: drop-shadow(0 0 12px var(--glow));
+  }
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  width: 100%;
+}
+
+.eyebrow {
+  @include eyebrow;
+
+  :global(:root[data-theme='cinema']) & {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--text);
+
+    &::before {
+      content: '';
+      width: 0.3rem;
+      height: 1rem;
+      background: var(--accent);
+    }
+  }
+}
+
+.question {
+  @include display-type(clamp(2rem, 1.25rem + 3.6vw, 3.4rem));
+  color: var(--text);
+
+  // focused programmatically (tabIndex -1) for screen readers; a heading is not a control, so no ring
+  &:focus {
+    outline: none;
+  }
+
+  :global(:root[data-theme='cinema']) & {
+    text-shadow: 0 0 40px var(--glow);
+  }
+}
+
+// Two beats, then rest: a quiet pulse rather than a throb.
+.heartbeat {
+  transform-origin: 50% 60%;
+  animation: heartbeat var(--heartbeat) var(--ease-in-out) infinite;
+}
+
+@keyframes heartbeat {
+  0%,
+  42%,
+  100% {
+    transform: scale(1);
+  }
+  12% {
+    transform: scale(1.03);
+  }
+  26% {
+    transform: scale(1.012);
+  }
+}
+
+.lede {
+  max-width: 26rem;
+  color: var(--text-muted);
+  font-size: 1.05rem;
+}
+
+// ---- Form ----------------------------------------------------------------------------------
+.form {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-2);
+  width: min(100%, 24rem);
+  margin-top: var(--space-3);
+}
+
+.label {
+  @include eyebrow;
+  text-align: left;
+}
+
+.field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
+  border-radius: var(--field-radius);
+  background: var(--field-bg);
+  border-bottom: 1.5px solid color-mix(in srgb, var(--accent) 35%, transparent);
+
+  // Rose: a drawn underline that grows from the centre on focus.
+  &::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    bottom: -1.5px;
+    left: 0;
+    height: 2px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transition: transform var(--dur-slow) var(--ease-out);
+  }
+
+  &:focus-within::after {
+    transform: scaleX(1);
+  }
+
+  :global(:root[data-theme='cinema']) & {
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow);
+
+    &::after {
+      display: none;
+    }
+
+    &:focus-within {
+      border-color: var(--accent);
+    }
+  }
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  min-height: 3rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  outline: none;
+  caret-color: var(--accent);
+
+  &:disabled {
+    opacity: 0.45;
+  }
+
+  :global(:root[data-theme='cinema']) & {
+    font-weight: 600;
+    font-size: 1.15rem;
+  }
+}
+
+.flash {
+  position: absolute;
+  inset: -3px;
+  border-radius: calc(var(--field-radius) + 3px);
+  box-shadow:
+    0 0 0 2px var(--note),
+    0 0 26px var(--glow);
+  pointer-events: none;
+}
+
+.submit {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2.9rem;
+  height: 2.9rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 6px 18px -6px var(--glow);
+  transition:
+    transform var(--dur-base) var(--ease-out),
+    opacity var(--dur-fast) ease;
+
+  svg {
+    transition: transform var(--dur-base) var(--ease-out);
+  }
+
+  &:hover:not(:disabled) {
+    transform: scale(1.06);
+
+    svg {
+      transform: translateX(2px);
+    }
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.94);
+  }
+
+  &:focus-visible {
+    @include focus-ring;
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.35;
+  }
+
+  &[aria-busy='true'] svg {
+    opacity: 0.5;
+  }
+
+  :global(:root[data-theme='cinema']) & {
+    border-radius: calc(var(--radius) - 2px);
+  }
+}
+
+.status {
+  min-height: 3.2em; // reserve room so messages never shift the layout
+  color: var(--note);
+  font-size: 0.95rem;
+  text-align: left;
+}
+
+.note {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.timer {
+  @include display-type(2.4rem);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+// ---- Loading / error -----------------------------------------------------------------------
+.skeleton {
+  display: block;
+  width: min(80%, 22rem);
+  height: 1.6rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+  animation: breathe 1.6s ease-in-out infinite;
+}
+
+.skeletonShort {
+  width: min(52%, 14rem);
+  animation-delay: 0.2s;
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.retry {
+  min-height: 2.9rem;
+  padding: 0 var(--space-5);
+  border: 1.5px solid var(--accent);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform var(--dur-base) var(--ease-out);
+
+  &:hover {
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: scale(0.97);
+  }
+
+  &:focus-visible {
+    @include focus-ring;
+  }
+
+  :global(:root[data-theme='cinema']) & {
+    border-radius: var(--radius);
+  }
+}
+
+.srOnly {
+  @include visually-hidden;
+}
+
+// ---- Success bloom -------------------------------------------------------------------------
+.bloom {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  display: grid;
+  place-items: center;
+  background: radial-gradient(
+    circle at 50% 50%,
+    var(--surface) 0%,
+    var(--bg-2) 45%,
+    color-mix(in srgb, var(--accent) 18%, var(--bg)) 100%
+  );
+
+  :global(:root[data-theme='cinema']) & {
+    background: radial-gradient(
+      circle at 50% 50%,
+      color-mix(in srgb, var(--accent) 60%, #000) 0%,
+      color-mix(in srgb, var(--accent) 22%, var(--bg-2)) 40%,
+      var(--bg-2) 80%
+    );
+  }
+}
+
+.bloomRose {
+  display: block;
+  width: min(46vw, 13rem);
+  aspect-ratio: 1;
+
+  :global(:root[data-theme='cinema']) & {
+    --accent: #fff; // white line-art on the red glow
+    filter: drop-shadow(0 0 18px rgba(255, 255, 255, 0.35));
+  }
+}

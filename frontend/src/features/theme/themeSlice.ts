@@ -7,6 +7,16 @@ export function readStoredTheme(): ThemeName {
   return document.documentElement.dataset.theme === 'cinema' ? 'cinema' : 'rose'
 }
 
+/** True when the visitor (or an earlier default) already stored a theme in localStorage. */
+export function hasStoredTheme(): boolean {
+  try {
+    const v = localStorage.getItem(STORAGE_KEY)
+    return v === 'rose' || v === 'cinema'
+  } catch {
+    return false
+  }
+}
+
 /** Writes the theme to <html> and localStorage. Safe if storage is blocked. */
 export function applyTheme(theme: ThemeName): void {
   document.documentElement.dataset.theme = theme

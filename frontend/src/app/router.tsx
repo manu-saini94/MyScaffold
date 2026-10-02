@@ -1,11 +1,41 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
+import { ProfileGate } from '../features/profiles/ProfileGate'
+import { SessionGate } from '../features/session/SessionGate'
+import { UnlockScreen } from '../features/unlock/UnlockScreen'
 import { preloadWorld } from '../features/world/preload'
+import { Backdrop } from './Backdrop'
 import { Shell } from './Shell'
 
 export const router = createBrowserRouter([
   {
+    path: '/unlock',
+    element: (
+      <Backdrop>
+        <SessionGate route="unlock">
+          <UnlockScreen />
+        </SessionGate>
+      </Backdrop>
+    ),
+    HydrateFallback: () => null,
+  },
+  {
+    path: '/who',
+    element: (
+      <Backdrop>
+        <SessionGate route="who">
+          <ProfileGate />
+        </SessionGate>
+      </Backdrop>
+    ),
+    HydrateFallback: () => null,
+  },
+  {
     path: '/',
-    element: <Shell />,
+    element: (
+      <SessionGate route="app">
+        <Shell />
+      </SessionGate>
+    ),
     HydrateFallback: () => null,
     children: [
       {

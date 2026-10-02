@@ -79,6 +79,15 @@ Short log of choices and dependency justifications. Newest sections at the botto
 - **No rate limiting beyond unlock inside the app.** Other endpoints (`/oauth2/**`, `/login/**`, `/api/**`) are to be limited at the reverse proxy in Phase 8.
 - **Deferred on purpose:** the optional private-link second factor (owner undecided), pinning the admin Google `sub`, proxy-level limiting of other endpoints, a `__Host-` cookie prefix, caching `/api/auth/question`.
 
+## Phase 3 (frontend foundation)
+- **CSRF in one place.** `services/api.ts` wraps `fetchBaseQuery`: every POST/PUT/PATCH/DELETE sends `X-XSRF-TOKEN` read from the `XSRF-TOKEN` cookie. No cookie yet means `GET /auth/question` first. A 403 on a mutation re-reads the cookie (fetching the question again if it is gone) and retries exactly once; a second 403 is returned to the caller. Reason: contract 1.2, and an unbounded retry would hammer the rate limiter.
+- **401 handling.** A 401 from `/experience`, `/worlds/**` or `/media/**` dispatches `sessionLost()`; `SessionGate` then routes to `/unlock`. A 401 from `/auth/unlock` is a wrong answer and is NOT a session loss (the caller reads the Problem).
+- **Server clock offset.** On every `/experience` or `/worlds/{slug}` response the offset `serverTime - Date.now()` is stored (`services/serverClock.ts`, set in `transformResponse` so it is right before first render). `isWorldLocked` and the countdown use `serverNow()`, so a wrong device clock cannot unlock or hide a chapter early. The server still enforces the lock.
+- **Profile in sessionStorage.** The chosen profile (`'her'`) lives in `sessionStorage` (tab lifetime, cleared on `sessionLost`), not localStorage: it is a convenience, not an identity, and must not outlive the viewer session. Storage that throws is tolerated (the choice stays in memory).
+- **Theme default.** `experience.defaultTheme` is applied once, only when localStorage holds no theme. Applying it uses `applyTheme`, which also stores it, so a later change of the server default does not override a theme the page has already shown.
+- **Mock data is test-only.** `worldsMock.ts` is a fixture; `config.ts` (`FOREVER_UNLOCK_AT`) is removed.
+- **No new dependencies.** RTK Query, react-router and the existing test stack cover everything.
+
 ## Open decisions
 - Fonts, rose motif and launcher density (see the Phase 0 report).
 - Google redirect URI origin (Vite `:5173` vs Spring `:8080`).

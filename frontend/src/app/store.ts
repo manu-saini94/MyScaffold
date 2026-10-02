@@ -1,10 +1,12 @@
 import { configureStore } from '@reduxjs/toolkit'
 import { api } from '../services/api'
+import sessionReducer from '../features/session/sessionSlice'
 import themeReducer from '../features/theme/themeSlice'
 
 export const store = configureStore({
   reducer: {
     theme: themeReducer,
+    session: sessionReducer,
     [api.reducerPath]: api.reducer,
   },
   middleware: (getDefault) => getDefault().concat(api.middleware),

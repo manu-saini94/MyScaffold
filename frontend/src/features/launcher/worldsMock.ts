@@ -1,10 +1,10 @@
-import { FOREVER_UNLOCK_AT } from '../../config'
 import type { World } from '../../types/world'
 
-// Local mock, shaped like the future API. Replaced by experienceApi.getWorlds later.
+// Test fixture only (not used at runtime): launcher-shaped worlds as mapExperience would produce them.
 export const WORLDS_MOCK: readonly World[] = [
   {
-    id: 1,
+    id: 'where-it-all-began',
+    chapter: 1,
     slug: 'where-it-all-began',
     title: 'Where It All Began',
     subtitle: 'The first hello, and everything that quietly followed.',
@@ -13,9 +13,12 @@ export const WORLDS_MOCK: readonly World[] = [
     photoCount: 24,
     locked: false,
     unlockAt: null,
+    cover: null,
+    previewMediaIds: [],
   },
   {
-    id: 2,
+    id: 'our-firsts',
+    chapter: 2,
     slug: 'our-firsts',
     title: 'Our Firsts',
     subtitle: 'First trips, first laughs, first of many.',
@@ -24,9 +27,12 @@ export const WORLDS_MOCK: readonly World[] = [
     photoCount: 31,
     locked: false,
     unlockAt: null,
+    cover: null,
+    previewMediaIds: [],
   },
   {
-    id: 3,
+    id: 'adventures-together',
+    chapter: 3,
     slug: 'adventures-together',
     title: 'Adventures Together',
     subtitle: 'Postcards from everywhere we have been.',
@@ -35,9 +41,12 @@ export const WORLDS_MOCK: readonly World[] = [
     photoCount: 42,
     locked: false,
     unlockAt: null,
+    cover: null,
+    previewMediaIds: [],
   },
   {
-    id: 4,
+    id: 'little-everyday-moments',
+    chapter: 4,
     slug: 'little-everyday-moments',
     title: 'Little Everyday Moments',
     subtitle: 'The ordinary days that turned out to be the best ones.',
@@ -46,9 +55,12 @@ export const WORLDS_MOCK: readonly World[] = [
     photoCount: 58,
     locked: false,
     unlockAt: null,
+    cover: null,
+    previewMediaIds: [],
   },
   {
-    id: 5,
+    id: 'the-question',
+    chapter: 5,
     slug: 'the-question',
     title: 'The Question',
     subtitle: 'One evening, one ring, one yes.',
@@ -57,9 +69,12 @@ export const WORLDS_MOCK: readonly World[] = [
     photoCount: 12,
     locked: false,
     unlockAt: null,
+    cover: null,
+    previewMediaIds: [],
   },
   {
-    id: 6,
+    id: 'our-forever',
+    chapter: 6,
     slug: 'our-forever',
     title: 'Our Forever',
     subtitle: 'A sky of stars we have not written yet.',
@@ -67,6 +82,8 @@ export const WORLDS_MOCK: readonly World[] = [
     tint: ['#2a1b4d', '#e50914'],
     photoCount: 0,
     locked: true,
-    unlockAt: FOREVER_UNLOCK_AT,
+    unlockAt: '2027-02-13T18:30:00Z',
+    cover: null,
+    previewMediaIds: [],
   },
 ]

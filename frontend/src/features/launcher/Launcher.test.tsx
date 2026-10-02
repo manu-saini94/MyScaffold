@@ -4,8 +4,19 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { LazyMotion, domMax } from 'motion/react'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { Launcher } from './Launcher'
+import { WORLDS_MOCK } from './worldsMock'
 
 vi.mock('../world/preload', () => ({ preloadWorld: vi.fn(() => Promise.resolve()) }))
+const list = vi.hoisted(() => ({ isError: false, retry: vi.fn() }))
+vi.mock('./useWorlds', async (orig) => ({
+  ...(await orig<typeof import('./useWorlds')>()),
+  useWorldList: () => ({
+    worlds: list.isError ? [] : WORLDS_MOCK,
+    loading: false,
+    isError: list.isError,
+    refetch: list.retry,
+  }),
+}))
 
 function Where() {
   return <output data-testid="where">{useLocation().pathname}</output>
@@ -25,6 +36,9 @@ function renderLauncher() {
 const cellOf = (el: Element | null) => (el as HTMLElement | null)?.dataset.cell
 
 beforeEach(() => {
+  // Freeze Date before the fixture's unlock instant so the locked-world tests never expire.
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-01T00:00:00Z'))
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
     matches: false,
     media: query,
@@ -42,8 +56,11 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  list.isError = false
+  list.retry.mockClear()
   cleanup()
   vi.unstubAllGlobals()
+  vi.useRealTimers()
 })
 
 describe('Launcher', () => {
@@ -99,5 +116,13 @@ describe('Launcher', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Our Forever, locked' }))
     expect(await screen.findByRole('timer', {}, { timeout: 4000 })).toBeTruthy()
     expect(screen.getByTestId('where').textContent).toBe('/')
+  })
+
+  it('shows a retry state when the experience failed to load, and retries on click', () => {
+    list.isError = true
+    renderLauncher()
+    expect(screen.getByRole('alert').textContent).toMatch(/did not load/)
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(list.retry).toHaveBeenCalledTimes(1)
   })
 })

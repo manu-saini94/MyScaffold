@@ -4,6 +4,7 @@ import { AnimatePresence } from 'motion/react'
 import { Particles } from '../components/Particles/Particles'
 import { RoseDecor } from '../components/Rose/RoseDecor'
 import { Launcher } from '../features/launcher/Launcher'
+import { useDefaultTheme } from '../features/theme/useDefaultTheme'
 import { useParticleKind } from '../features/theme/useParticleKind'
 import { Header } from './Header'
 
@@ -14,6 +15,7 @@ function Frozen({ children }: { children: ReactNode }) {
 
 /** App chrome. The launcher stays mounted under the world overlay so the shared-element transition can run both ways. */
 export function Shell() {
+  useDefaultTheme()
   const kind = useParticleKind()
   const location = useLocation()
   const outlet = useOutlet()

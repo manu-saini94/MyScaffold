@@ -1,11 +1,13 @@
-import { describe, expect, it } from 'vitest'
-import { FOREVER_UNLOCK_AT } from '../../config'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { WORLDS_MOCK } from './worldsMock'
-import { findWorld, isWorldLocked, useWorlds } from './useWorlds'
+import { resetServerClock, serverNow, setServerClock } from '../../services/serverClock'
+import { findWorld as find, isWorldLocked } from './useWorlds'
+
+const findWorld = (slug: string | undefined) => find(WORLDS_MOCK, slug)
 
 const LAYOUTS = ['polaroid', 'filmstrip', 'postcards', 'memorywall', 'envelope', 'constellation']
 
-describe('worlds mock (shape of the future GET /api/worlds)', () => {
+describe('worlds fixture (launcher-shaped)', () => {
   it('has the six chapters with unique ids and slugs', () => {
     expect(WORLDS_MOCK).toHaveLength(6)
     expect(new Set(WORLDS_MOCK.map((w) => w.id)).size).toBe(6)
@@ -23,10 +25,8 @@ describe('worlds mock (shape of the future GET /api/worlds)', () => {
     if (w.unlockAt) expect(Number.isNaN(new Date(w.unlockAt).getTime())).toBe(false)
   })
 
-  it('locks only "Our Forever", and takes its date from the single config constant', () => {
-    const locked = WORLDS_MOCK.filter((w) => w.locked)
-    expect(locked.map((w) => w.slug)).toEqual(['our-forever'])
-    expect(locked[0]!.unlockAt).toBe(FOREVER_UNLOCK_AT)
+  it('locks only "Our Forever"', () => {
+    expect(WORLDS_MOCK.filter((w) => w.locked).map((w) => w.slug)).toEqual(['our-forever'])
   })
 
   it('keeps "Our Forever" last so it is the far end of the honeycomb', () => {
@@ -35,26 +35,35 @@ describe('worlds mock (shape of the future GET /api/worlds)', () => {
 })
 
 describe('useWorlds helpers', () => {
-  it('useWorlds returns the mock list until the API is wired', () => {
-    expect(useWorlds()).toBe(WORLDS_MOCK)
-  })
-
   it('findWorld resolves by slug and returns undefined otherwise', () => {
-    expect(findWorld('our-firsts')?.id).toBe(2)
+    expect(findWorld('our-firsts')?.chapter).toBe(2)
     expect(findWorld('nope')).toBeUndefined()
     expect(findWorld(undefined)).toBeUndefined()
   })
 
-  it('isWorldLocked flips exactly at the unlock instant', () => {
-    const forever = findWorld('our-forever')!
-    const at = new Date(FOREVER_UNLOCK_AT).getTime()
-    expect(isWorldLocked(forever, at - 1)).toBe(true)
-    expect(isWorldLocked(forever, at)).toBe(false)
-    expect(isWorldLocked(forever, at + 86_400_000)).toBe(false)
+  it('isWorldLocked follows the payload flag, not the device clock', () => {
+    expect(isWorldLocked(findWorld('our-forever')!)).toBe(true)
+    expect(isWorldLocked(findWorld('our-firsts')!)).toBe(false)
+  })
+})
+
+describe('server clock', () => {
+  afterEach(() => {
+    resetServerClock()
+    vi.useRealTimers()
   })
 
-  it('never locks an ordinary world, nor one flagged locked without a date', () => {
-    expect(isWorldLocked(findWorld('our-firsts')!, 0)).toBe(false)
-    expect(isWorldLocked({ ...findWorld('our-forever')!, unlockAt: null }, 0)).toBe(false)
+  it('serverNow follows the server, not a wrong device clock', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(10_000_000)
+    setServerClock(new Date(10_000_000 - 86_400_000).toISOString(), Date.now()) // device is a day ahead
+    expect(serverNow()).toBe(10_000_000 - 86_400_000)
+    vi.setSystemTime(10_000_000 + 5000)
+    expect(serverNow()).toBe(10_000_000 - 86_400_000 + 5000)
+  })
+
+  it('ignores an unparseable serverTime', () => {
+    setServerClock('garbage')
+    expect(Math.abs(serverNow() - Date.now())).toBeLessThan(50)
   })
 })

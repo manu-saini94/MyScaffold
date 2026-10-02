@@ -1,8 +1,13 @@
+import type { MediaRef } from './api'
+
 export type WorldLayout = 'polaroid' | 'filmstrip' | 'postcards' | 'memorywall' | 'envelope' | 'constellation'
 
-/** Shaped like the future GET /api/worlds payload. */
+/** A launcher world, mapped from the GET /api/experience summary (features/launcher/mapExperience.ts). */
 export interface World {
-  id: number
+  /** Stable key: the slug. */
+  id: string
+  /** 1-based position in the launcher. */
+  chapter: number
   slug: string
   title: string
   subtitle: string
@@ -11,8 +16,11 @@ export interface World {
   tint: readonly [string, string]
   photoCount: number
   locked: boolean
-  /** ISO local date-time. Server is the source of truth once wired. */
+  /** ISO-8601 UTC instant from the server; compare against serverNow(). */
   unlockAt: string | null
+  /** Null when the world has none, and always null while locked. */
+  cover: MediaRef | null
+  previewMediaIds: readonly string[]
 }
 
 export type ThemeName = 'rose' | 'cinema'
