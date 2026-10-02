@@ -1,0 +1,19 @@
+# Keep the build context small and free of secrets/local state.
+.git
+.env
+.env.*
+!.env.example
+**/node_modules
+**/target
+**/dist
+**/data
+**/coverage
+**/screenshots
+**/.claude
+.clawness
+graphify-out
+.graphify_*
+.idea
+.vscode
+*.log
+*.tsbuildinfo

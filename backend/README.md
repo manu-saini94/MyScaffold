@@ -55,7 +55,7 @@ is below 600000.
 - CSRF is enforced on every POST/PUT/PATCH/DELETE on every path, including `/logout`. There are no exemptions.
 - A Google account that is not the admin is signed out immediately after login (403 page, stored tokens removed).
   Logout also removes the stored Google tokens.
-- Headers: CSP (`default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; frame-ancestors 'none';
+- Headers: CSP (`default-src 'self'; img-src 'self' data:; media-src 'self' https:; style-src 'self'; script-src 'self'; frame-ancestors 'none';
   base-uri 'self'; form-action 'self'`), `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`.
   The dev page therefore uses `import.js` and `import.css` instead of inline script and style.
 - Clients that carry Google tokens never follow redirects (a 3xx is a failure).

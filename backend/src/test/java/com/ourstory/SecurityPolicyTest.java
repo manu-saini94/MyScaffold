@@ -23,7 +23,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @ActiveProfiles("test")
 class SecurityPolicyTest {
 
-    static final String CSP = "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; "
+    static final String CSP = "default-src 'self'; img-src 'self' data:; media-src 'self' https:; style-src 'self'; script-src 'self'; "
             + "frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
 
     @Autowired MockMvc mvc;
@@ -58,8 +58,9 @@ class SecurityPolicyTest {
     void unknownPathsAreDeniedForEveryone() throws Exception {
         // /api/experience is deliberately not here any more: Phase 2B opens it to VIEWER/ADMIN (admin gets 404
         // until a controller exists); its access matrix is covered in ViewerFlowTest.
-        for (String path : new String[] {"/nothing", "/actuator/env", "/api/whatever/x",
-                "/dev-not", "/private/file"}) {
+        // Extension-less non-API paths are SPA routes (index.html) since Phase 8; see SpaFallbackTest.
+        for (String path : new String[] {"/nothing.bin", "/actuator/env", "/api/whatever/x",
+                "/dev-not.txt", "/private/file.json"}) {
             mvc.perform(get(path)).andExpect(status().isUnauthorized());
             mvc.perform(get(path).with(stranger())).andExpect(status().isForbidden());
             mvc.perform(get(path).with(admin())).andExpect(status().isForbidden());

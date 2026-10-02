@@ -15,6 +15,10 @@
 	<description>Our Story - private cinematic photo gallery backend</description>
 	<properties>
 		<java.version>21</java.version>
+		<frontend.dir>${project.basedir}/../frontend</frontend.dir>
+		<!-- Used only by the "ship" profile. Node: current LTS line "Krypton" (v24), pinned exactly. -->
+		<frontend-maven-plugin.version>2.0.2</frontend-maven-plugin.version>
+		<node.version>v24.21.0</node.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -93,4 +97,72 @@
 			</plugin>
 		</plugins>
 	</build>
+	<profiles>
+		<!--
+			One-command fat JAR with the SPA inside:  mvnw -Pship clean package   (add -DskipTests to go faster)
+			Installs Node into target/node (nothing global), runs `npm ci` + `npm run build` in ../frontend and
+			copies frontend/dist into target/classes/static, which Spring Boot serves. Without the profile
+			(mvnw test, mvnw package) npm is never touched.
+		-->
+		<profile>
+			<id>ship</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>com.github.eirslett</groupId>
+						<artifactId>frontend-maven-plugin</artifactId>
+						<version>${frontend-maven-plugin.version}</version>
+						<configuration>
+							<workingDirectory>${frontend.dir}</workingDirectory>
+							<installDirectory>${project.build.directory}</installDirectory>
+						</configuration>
+						<executions>
+							<execution>
+								<id>install-node-and-npm</id>
+								<goals><goal>install-node-and-npm</goal></goals>
+								<phase>generate-resources</phase>
+								<configuration>
+									<nodeVersion>${node.version}</nodeVersion>
+								</configuration>
+							</execution>
+							<execution>
+								<id>npm-ci</id>
+								<goals><goal>npm</goal></goals>
+								<phase>generate-resources</phase>
+								<configuration>
+									<arguments>ci</arguments>
+								</configuration>
+							</execution>
+							<execution>
+								<id>npm-build</id>
+								<goals><goal>npm</goal></goals>
+								<phase>generate-resources</phase>
+								<configuration>
+									<arguments>run build</arguments>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+					<plugin>
+						<artifactId>maven-resources-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>copy-frontend-dist</id>
+								<phase>process-resources</phase>
+								<goals><goal>copy-resources</goal></goals>
+								<configuration>
+									<outputDirectory>${project.build.outputDirectory}/static</outputDirectory>
+									<resources>
+										<resource>
+											<directory>${frontend.dir}/dist</directory>
+										</resource>
+									</resources>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
 </project>

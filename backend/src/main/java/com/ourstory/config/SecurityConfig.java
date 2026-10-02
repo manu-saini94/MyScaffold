@@ -46,7 +46,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class SecurityConfig {
 
     /** Everything the app serves is same-origin; inline script/style are not needed (dev page uses files). */
-    static final String CONTENT_SECURITY_POLICY = "default-src 'self'; img-src 'self' data:; style-src 'self'; "
+    static final String CONTENT_SECURITY_POLICY = "default-src 'self'; img-src 'self' data:; media-src 'self' https:; style-src 'self'; "
             + "script-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
     static final String PERMISSIONS_POLICY = "camera=(), microphone=(), geolocation=()";
 
@@ -64,6 +64,8 @@ public class SecurityConfig {
                 auth.requestMatchers(EndpointRequest.to(HealthEndpoint.class)).permitAll();
                 auth.requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll();
                 auth.requestMatchers("/", "/index.html", "/assets/**").permitAll();
+                // Client-side routes (/unlock, /who, /admin/**, /world/**, ...): GET/HEAD only; served as index.html.
+                auth.requestMatchers(SecurityConfig::isSpaRouteRequest).permitAll();
                 // OAuth2 redirect, callback and Spring's login/error pages (all GET; state-checked by Spring).
                 auth.requestMatchers("/oauth2/**", "/login/**", "/error").permitAll();
                 // Unlock endpoints are public (CSRF still applies to the POSTs; GET /question issues the token).
@@ -101,6 +103,19 @@ public class SecurityConfig {
             });
         }
         return http.build();
+    }
+
+    /** GET/HEAD of an extension-less, non-server path; anything else (POST, /api/**, files) is not matched. */
+    static boolean isSpaRouteRequest(HttpServletRequest request) {
+        String method = request.getMethod();
+        if (!"GET".equals(method) && !"HEAD".equals(method)) {
+            return false;
+        }
+        String uri = request.getRequestURI();
+        String context = request.getContextPath();
+        String path = context != null && !context.isEmpty() && uri.startsWith(context)
+                ? uri.substring(context.length()) : uri;
+        return SpaRoutes.isClientRoute(path);
     }
 
     /**

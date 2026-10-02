@@ -6,7 +6,7 @@ Short log of choices and dependency justifications. Newest sections at the botto
 
 ### Design
 - **Themes:** `rose` (default, white with red roses and falling petals) and `cinema` (near-black, bold red accent, inspired by streaming UIs, no third-party assets). Applied through `<html data-theme>` and one shared CSS custom-property token set.
-- **Home screen:** a smartwatch-style honeycomb launcher. Each round icon is one world and opens that world's gallery through a shared-element expand.
+- **Home screen:** round photo orbs scattered across a pure-white page with rose clusters at the top and bottom (Phase 4 replaced the honeycomb launcher). Each orb shows a photo from its world and opens it through a shared-element expand.
 - **Particles:** hand-written Canvas 2D instead of tsparticles, to save bundle size.
 - **Deferred for weight:** lenis, embla-carousel, lottie-react, howler, three.js. Add each one only when a phase needs it, with a line here.
 
@@ -99,6 +99,13 @@ Short log of choices and dependency justifications. Newest sections at the botto
 - Letters preview uses `react-markdown` with no raw HTML. Reordering: `@dnd-kit` (pointer + keyboard sensors) plus Up/Down buttons.
 - Removed: the temporary `/dev/**` import page, its security permit and `ourstory.dev-tools.enabled`. `ourstory.post-login-url` now defaults to `/admin`.
 
+## Phase 8 (ship)
+- **SPA fallback in the resource handler, not a controller.** `StaticResourceConfig` registers `/**` over `classpath:/static/` with a `PathResourceResolver` that returns `index.html` when no file matches and `SpaRoutes.isClientRoute` says so (extension-less last segment, first segment not `api|oauth2|login|logout|actuator|assets|error`). A controller mapped to `/**` would shadow real static files (controllers outrank the resource handler). Only GET/HEAD reach it. `SecurityConfig` uses the same `SpaRoutes` check as a GET/HEAD-only matcher, so resolver and permits cannot disagree; everything else stays deny-by-default and `/api/**` is unchanged (anonymous 401). A root-level public file with an extension other than `favicon.*` needs its own permit.
+- **Caching:** `/assets/**` (hashed Vite output) `max-age=31536000, public, immutable`; every other static response including `index.html` `no-cache` (ETag/Last-Modified revalidation).
+- **Fat JAR:** Maven profile `ship` (`mvnw -Pship clean package`): `com.github.eirslett:frontend-maven-plugin` 2.0.2 (latest release in Maven Central metadata) installs Node v24.21.0 (current LTS "Krypton" per nodejs.org/dist/index.json) into `backend/target/node`, runs `npm ci` and `npm run build` in `frontend/`, then `maven-resources-plugin` copies `frontend/dist` to `target/classes/static`. Off by default so `mvnw test` needs no npm.
+- **Image:** multi-stage. `node:24-alpine3.24` (SPA build) -> `eclipse-temurin:21-jdk-alpine-3.24` (Maven wrapper, `-DskipTests`) -> `eclipse-temurin:21-jre-alpine-3.24` (runtime). Runtime chosen over distroless because busybox `wget` gives an in-image `HEALTHCHECK` on `/actuator/health` without installing curl; the JRE ships `java.desktop` for ImageIO. Non-root uid 10001, `-Xmx256m` via `JAVA_TOOL_OPTIONS`, `VOLUME /data`, `SPRING_PROFILES_ACTIVE=prod`. With an orchestrator HTTP check, point it at `/actuator/health` and drop the in-image one.
+- **Still at the proxy:** TLS, `X-Forwarded-For` overwrite, rate limits for `/oauth2/**`, `/login/**`, `/api/**`.
+
 ## Open decisions
 - Fonts, rose motif and launcher density (see the Phase 0 report).
 - Google redirect URI origin (Vite `:5173` vs Spring `:8080`).
@@ -106,6 +113,5 @@ Short log of choices and dependency justifications. Newest sections at the botto
 - Stay on Boot 3.5 or move to 4.x.
 - TODO (Phase 8): rate limiting on `/oauth2/**`, `/login/**` and `/api/**` (everything except the unlock limiter). Do it at the reverse proxy, or add a filter then. Not implemented in the app.
 - TODO: pin the admin Google `sub` (and `hd` claim if a Workspace account is ever used) in addition to the verified email.
-- TODO (Phase 8): the SPA routes `/admin`, `/unlock`, `/who`, `/world/*` need a server-side fallback to `index.html` (SecurityConfig permits only `/`, `/index.html`, `/assets/**`), otherwise the post-login redirect to `/admin` is a 401 when the jar serves the SPA.
 - TODO: Vite dev proxy lacks `/login` and `/logout`; add them (see backend README, dev admin sign-in) so the whole OAuth round trip stays on `:5173`.
 - Note: `ourstory.viewer-cookie-secret` is unused by Phase 1 code; it is validated (prod: 32+ chars) so Phase 2 can rely on it.
