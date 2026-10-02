@@ -30,10 +30,9 @@ public final class TestSupport {
         return new OurStoryProperties(dataDir,
                 new OurStoryProperties.Google("client-id", "client-secret", pickerBaseUrl, mediaHosts,
                         allowInsecureHttp),
-                null, adminEmail, "/dev/import.html",
+                null, adminEmail, "/admin",
                 new OurStoryProperties.ImportJob(4, maxBytes, attempts, 10, jobTimeout, downloadTimeout,
-                        minFreeBytes),
-                new OurStoryProperties.DevTools(false));
+                        minFreeBytes));
     }
 
     public static byte[] jpeg(Color color, int width, int height) {

@@ -93,11 +93,4 @@ class StartupFailureTest {
             assertThat(context.isRunning()).isTrue();
         }
     }
-
-    @Test
-    void devToolsAreOffUnlessEnabled() {
-        try (ConfigurableApplicationContext context = app("startup-ok-2", "ourstory.dev-tools.enabled=false").run()) {
-            assertThat(context.getEnvironment().getProperty("ourstory.dev-tools.enabled")).isEqualTo("false");
-        }
-    }
 }

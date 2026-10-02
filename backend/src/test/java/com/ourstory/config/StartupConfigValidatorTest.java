@@ -15,9 +15,8 @@ class StartupConfigValidatorTest {
             boolean insecure, List<String> hosts, String viewerSecret) {
         return new OurStoryProperties("./data",
                 new OurStoryProperties.Google(clientId, secret, pickerUrl, hosts, insecure),
-                viewerSecret, admin, "/dev/import.html",
-                new OurStoryProperties.ImportJob(4, 1024, 3, 1, Duration.ofHours(2), Duration.ofMinutes(2), 0),
-                new OurStoryProperties.DevTools(false));
+                viewerSecret, admin, "/admin",
+                new OurStoryProperties.ImportJob(4, 1024, 3, 1, Duration.ofHours(2), Duration.ofMinutes(2), 0));
     }
 
     private static OurStoryProperties valid() {
@@ -94,7 +93,6 @@ class StartupConfigValidatorTest {
         assertThat(analysis.getDescription()).contains("first problem").contains("second problem");
         assertThat(analysis.getAction()).contains("README");
         assertThat(cause.problems()).hasSize(2);
-        assertThat(TestSupport.props("d", "a@b.c", List.of("x"), 1024, 1).devTools().enabled()).isFalse();
     }
 
     @Test

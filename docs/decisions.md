@@ -88,6 +88,17 @@ Short log of choices and dependency justifications. Newest sections at the botto
 - **Mock data is test-only.** `worldsMock.ts` is a fixture; `config.ts` (`FOREVER_UNLOCK_AT`) is removed.
 - **No new dependencies.** RTK Query, react-router and the existing test stack cover everything.
 
+## Phase 6 (admin UI)
+- Admin lives at `/admin/*`, lazy chunk, outside `SessionGate` (a Google session, not a viewer). Sections: Import, Library, Worlds (+ moments), Letters, Settings. `/api/admin/me`: 401 -> Google sign-in link, 403 -> not-admin message.
+- `services/adminApi.ts` uses `api.enhanceEndpoints({addTagTypes})` so `services/api.ts` is untouched. Admin mutations also invalidate the viewer tags `Experience` and `World`.
+- Picker and import polling is a small effect-driven loop (`usePoll`) that reads the delay from each response (`pollIntervalMs`, floor 500 ms, stops at `timeoutMs`), not RTK `pollingInterval`.
+- QR code: `uqr` `encode()` matrix drawn as one SVG `<path>`; nothing is injected as markup. `authorizeUrl` is used only when it is a local path.
+- Library "unassigned" filter is client-side (the API ignores `unassigned=true`): union of all worlds' moments, applied to the loaded page.
+- World PUT always sends every field (omitted = cleared server-side), including `musicUrl`; `unlockAt` empty is sent as `null` (clears the lock).
+- Settings never pre-fill answers; `unlockAnswers` is sent only when typed (one per line) and replaces all.
+- Letters preview uses `react-markdown` with no raw HTML. Reordering: `@dnd-kit` (pointer + keyboard sensors) plus Up/Down buttons.
+- Removed: the temporary `/dev/**` import page, its security permit and `ourstory.dev-tools.enabled`. `ourstory.post-login-url` now defaults to `/admin`.
+
 ## Open decisions
 - Fonts, rose motif and launcher density (see the Phase 0 report).
 - Google redirect URI origin (Vite `:5173` vs Spring `:8080`).
@@ -95,5 +106,6 @@ Short log of choices and dependency justifications. Newest sections at the botto
 - Stay on Boot 3.5 or move to 4.x.
 - TODO (Phase 8): rate limiting on `/oauth2/**`, `/login/**` and `/api/**` (everything except the unlock limiter). Do it at the reverse proxy, or add a filter then. Not implemented in the app.
 - TODO: pin the admin Google `sub` (and `hd` claim if a Workspace account is ever used) in addition to the verified email.
-- TODO (Phase 6): remove `/dev/**` from the jar when the real admin UI replaces the dev import page. Until then it is served only when `ourstory.dev-tools.enabled=true` (dev profile).
+- TODO (Phase 8): the SPA routes `/admin`, `/unlock`, `/who`, `/world/*` need a server-side fallback to `index.html` (SecurityConfig permits only `/`, `/index.html`, `/assets/**`), otherwise the post-login redirect to `/admin` is a 401 when the jar serves the SPA.
+- TODO: Vite dev proxy lacks `/login` and `/logout`; add them (see backend README, dev admin sign-in) so the whole OAuth round trip stays on `:5173`.
 - Note: `ourstory.viewer-cookie-secret` is unused by Phase 1 code; it is validated (prod: 32+ chars) so Phase 2 can rely on it.

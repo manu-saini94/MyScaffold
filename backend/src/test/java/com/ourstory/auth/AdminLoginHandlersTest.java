@@ -70,8 +70,8 @@ class AdminLoginHandlersTest {
         request.setSession(session);
         MockHttpServletResponse response = new MockHttpServletResponse();
         Authentication admin = new TestingAuthenticationToken("admin-sub", "n/a", "ROLE_ADMIN");
-        AdminLoginHandlers.success("/dev/import.html", cleaner).onAuthenticationSuccess(request, response, admin);
-        assertThat(response.getRedirectedUrl()).isEqualTo("/dev/import.html");
+        AdminLoginHandlers.success("/admin", cleaner).onAuthenticationSuccess(request, response, admin);
+        assertThat(response.getRedirectedUrl()).isEqualTo("/admin");
         assertThat(session.isInvalid()).isFalse();
         assertThat(hasTokens("admin-sub")).isTrue();
     }
@@ -86,7 +86,7 @@ class AdminLoginHandlersTest {
         Authentication stranger = new TestingAuthenticationToken("stranger-sub", "n/a", "OIDC_USER");
         SecurityContextHolder.getContext().setAuthentication(stranger);
 
-        AdminLoginHandlers.success("/dev/import.html", cleaner).onAuthenticationSuccess(request, response, stranger);
+        AdminLoginHandlers.success("/admin", cleaner).onAuthenticationSuccess(request, response, stranger);
 
         assertThat(response.getStatus()).isEqualTo(403);
         assertThat(response.getRedirectedUrl()).isNull();

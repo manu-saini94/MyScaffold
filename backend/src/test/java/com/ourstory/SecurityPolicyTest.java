@@ -83,19 +83,9 @@ class SecurityPolicyTest {
     }
 
     @Test
-    void devPagesAreServedWhenDevToolsAreEnabled() throws Exception {
-        mvc.perform(get("/dev/import.html")).andExpect(status().isOk())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("import.js")))
-                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("<script>"))))
-                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("<style>"))));
-        mvc.perform(get("/dev/import.js")).andExpect(status().isOk());
-        mvc.perform(get("/dev/import.css")).andExpect(status().isOk());
-    }
-
-    @Test
     void everyNonSafeMethodNeedsACsrfTokenOnEveryPath() throws Exception {
         for (String path : new String[] {"/logout", "/api/admin/picker/sessions", "/api/media/x/thumb",
-                "/dev/import.html", "/anything", "/actuator/health"}) {
+                "/anything", "/actuator/health"}) {
             mvc.perform(post(path).with(admin())).andExpect(status().isForbidden());
             mvc.perform(post(path)).andExpect(status().isForbidden());
         }

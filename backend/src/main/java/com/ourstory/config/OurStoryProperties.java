@@ -26,11 +26,10 @@ public record OurStoryProperties(
         @Valid @DefaultValue Google google,
         String viewerCookieSecret,
         String adminEmail,
-        @DefaultValue("/dev/import.html")
+        @DefaultValue("/admin")
         @Pattern(regexp = "^/(?!/)[A-Za-z0-9._~/-]*$", message = "must be a local path made of [A-Za-z0-9._~/-]")
         String postLoginUrl,
-        @Valid @DefaultValue ImportJob importJob,
-        @Valid @DefaultValue DevTools devTools) {
+        @Valid @DefaultValue ImportJob importJob) {
 
     public record Google(
             String clientId,
@@ -56,9 +55,5 @@ public record OurStoryProperties(
             @DefaultValue("2m") @NotNull Duration downloadTimeout,
             /** Imports write nothing when the volume has less usable space than this. */
             @DefaultValue("209715200") @Min(0) long minFreeBytes) {
-    }
-
-    /** The TEMPORARY /dev/** static pages are reachable only when enabled (dev profile only). */
-    public record DevTools(@DefaultValue("false") boolean enabled) {
     }
 }

@@ -12,9 +12,6 @@ server:
     session:
       cookie:
         secure: false   # the session cookie must work on plain http://localhost
-ourstory:
-  dev-tools:
-    enabled: true       # serves the TEMPORARY /dev/import.html page
 logging:
   level:
     com.ourstory: DEBUG

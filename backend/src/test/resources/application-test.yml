@@ -3,8 +3,6 @@ spring:
     url: jdbc:h2:mem:ourstory-test;DB_CLOSE_DELAY=-1
 ourstory:
   data-dir: target/test-data
-  dev-tools:
-    enabled: true
   import-job:
     backoff-base-millis: 1
     min-free-bytes: 0

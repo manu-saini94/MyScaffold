@@ -66,10 +66,6 @@ public class SecurityConfig {
                 auth.requestMatchers("/", "/index.html", "/assets/**").permitAll();
                 // OAuth2 redirect, callback and Spring's login/error pages (all GET; state-checked by Spring).
                 auth.requestMatchers("/oauth2/**", "/login/**", "/error").permitAll();
-                if (props.devTools().enabled()) {
-                    // TEMPORARY dev page (Phase 6 replaces it): static files only, no data. Dev profile only.
-                    auth.requestMatchers("/dev/**").permitAll();
-                }
                 // Unlock endpoints are public (CSRF still applies to the POSTs; GET /question issues the token).
                 auth.requestMatchers(HttpMethod.GET, "/api/auth/question", "/api/auth/status").permitAll();
                 auth.requestMatchers(HttpMethod.POST, "/api/auth/unlock", "/api/auth/lock").permitAll();

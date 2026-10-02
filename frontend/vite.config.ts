@@ -8,6 +8,9 @@ export default defineConfig({
     proxy: {
       '/api': { target: 'http://localhost:8080', changeOrigin: false },
       '/oauth2': { target: 'http://localhost:8080', changeOrigin: false },
+      // Google redirects to /login/oauth2/code/google; Spring Security's logout lives at /logout
+      '/login': { target: 'http://localhost:8080', changeOrigin: false },
+      '/logout': { target: 'http://localhost:8080', changeOrigin: false },
     },
   },
   build: { outDir: 'dist', sourcemap: false, target: 'es2022' },

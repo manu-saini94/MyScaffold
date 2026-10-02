@@ -47,7 +47,7 @@ ourstory:
     client-secret: ${GOOGLE_CLIENT_SECRET:}
   viewer-cookie-secret: ${VIEWER_COOKIE_SECRET:}
   admin-email: ${ADMIN_EMAIL:}
-  post-login-url: /dev/import.html   # TEMPORARY (Phase 6 replaces the dev page)
+  post-login-url: /admin             # where the browser lands after the admin's Google login (the admin UI)
   import-job:
     concurrency: 4
     max-download-bytes: 15728640
@@ -56,8 +56,6 @@ ourstory:
     job-timeout: 2h          # whole job; afterwards it is FAILED (Import timed out)
     download-timeout: 2m     # reading one image body end to end
     min-free-bytes: 209715200  # refuse to write when less than 200 MB is free on the data volume
-  dev-tools:
-    enabled: false           # /dev/** static pages; only application-dev.yml turns this on
   viewer:
     # Bootstrap only (see UnlockBootstrap): stored hashed in the settings table; never commit real values.
     unlock-question: ${OURSTORY_UNLOCK_QUESTION:}

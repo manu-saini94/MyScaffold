@@ -45,5 +45,11 @@ export const router = createBrowserRouter([
       },
     ],
   },
+  {
+    // The admin is a Google session, not a viewer session: outside SessionGate, and its own lazy chunk.
+    path: '/admin/*',
+    lazy: async () => ({ Component: (await import('../features/admin/AdminApp')).default }),
+    HydrateFallback: () => null,
+  },
   { path: '*', element: <Navigate to="/" replace /> },
 ])

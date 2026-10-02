@@ -259,8 +259,8 @@ class AdminApiTest {
     }
 
     @Test
-    void staticDevPageIsPublicButApiStaysProtected() throws Exception {
-        mvc.perform(get("/dev/import.html")).andExpect(status().isOk());
+    void devPageIsGoneAndApiStaysProtected() throws Exception {
+        mvc.perform(get("/dev/import.html")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/anything")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/admin/media")).andExpect(status().isUnauthorized());
     }

@@ -11,9 +11,9 @@ mvnw.cmd -q test                                            # tests
 ```
 
 **Local runs need the `dev` profile.** The base configuration is secure by default (session cookie is `Secure`,
-`HttpOnly`, `SameSite=Lax`, 30 minute timeout, `/dev/**` pages off). A `Secure` cookie is never sent over plain
+`HttpOnly`, `SameSite=Lax`, 30 minute timeout). A `Secure` cookie is never sent over plain
 `http://localhost`, so without `dev` the Google login silently loops. The `dev` profile only relaxes the cookie's
-`Secure` flag and turns on the temporary `/dev/import.html` page. Prod: `prod`.
+`Secure` flag. Prod: `prod`.
 
 The app starts with NO environment variables set (Google login and viewer/admin features simply stay off), but a
 half-configured Google setup refuses to start (see "Startup checks" below).
@@ -38,8 +38,7 @@ Optional tuning (`application.yml`, prefix `ourstory.`): `import-job.concurrency
 `import-job.max-download-bytes` (default 15 MiB per image), `import-job.max-attempts` (4, also used for Picker API
 calls), `import-job.backoff-base-millis` (500), `import-job.job-timeout` (2h, whole job; then FAILED "Import timed
 out"), `import-job.download-timeout` (2m, reading one image body), `import-job.min-free-bytes` (200 MB; below that
-items fail with `disk_full`), `dev-tools.enabled` (false; true only in the `dev` profile),
-`post-login-url` (`/dev/import.html`, TEMPORARY; must match `^/(?!/)[A-Za-z0-9._~/-]*$`).
+items fail with `disk_full`), `post-login-url` (`/admin`, the admin UI; must match `^/(?!/)[A-Za-z0-9._~/-]*$`).
 
 ### Startup checks
 
@@ -51,8 +50,7 @@ is below 600000.
 
 ### Security posture
 
-- Deny by default: only `/actuator/health`, static assets, `/oauth2/**`, `/login/**`, `/error`, and (dev profile only)
-  `/dev/**` are reachable without the admin role; `/api/admin/**` needs `ROLE_ADMIN`, `/api/media/**` ROLE_VIEWER or ROLE_ADMIN, the four `/api/auth/*` unlock
+- Deny by default: only `/actuator/health`, static assets, `/oauth2/**`, `/login/**`, `/error` are reachable without the admin role; `/api/admin/**` needs `ROLE_ADMIN`, `/api/media/**` ROLE_VIEWER or ROLE_ADMIN, the four `/api/auth/*` unlock
   endpoints are public (CSRF applies); everything else is denied.
 - CSRF is enforced on every POST/PUT/PATCH/DELETE on every path, including `/logout`. There are no exemptions.
 - A Google account that is not the admin is signed out immediately after login (403 page, stored tokens removed).
@@ -100,9 +98,18 @@ set ADMIN_EMAIL=you@example.com
 mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-Open **http://localhost:8080/dev/import.html** (TEMPORARY dev page, replaced by the admin UI in Phase 6):
-sign in with Google, click "Connect Google Photos" (consent for the Picker scope), then "Start import", pick photos
-in the tab that opens, and watch the progress bar. Imported photos appear below as thumbnails.
+Open the admin UI at **/admin** (Import tab): sign in with Google, create a picker session, open the link or scan the
+QR code, choose photos, then "Start import" and watch the progress bar. After the Google login the backend redirects to
+`ourstory.post-login-url` (`/admin`).
+
+Dev flow (SPA on Vite, API on Spring): run `npm run dev` in `frontend/` and open **http://localhost:5173/admin**. The
+sign-in link goes to `/oauth2/authorization/google` on the same origin, which Vite proxies to `:8080`; because
+`post-login-url` is a relative path, the final redirect lands on `:5173/admin` again. Google redirects to
+`{origin}/login/oauth2/code/google`, so register the `:5173` redirect URIs (both `google` and `google-picker`) and
+make sure Vite proxies `/login` as well as `/api` and `/oauth2` (`frontend/vite.config.ts`). Alternative without the
+`/login` proxy: sign in once on `http://localhost:8080/oauth2/authorization/google`; the session cookie is shared across
+ports on `localhost`, so `http://localhost:5173/admin` then works (the redirect itself ends on a 401 at `:8080/admin`,
+ignore it). In production the SPA is served from the same origin as the API, so no proxy is involved.
 
 Tokens are kept in memory only; after a server restart (or when Google revokes/expires the refresh token, weekly in
 OAuth Testing mode) the API answers `409` with `authorizeUrl` and the page shows "Connect Google Photos" again.
