@@ -23,10 +23,13 @@ docs/       decisions, Google Photos Picker notes
 Requirements: Java 21, Node 20+.
 
 ```bash
+# once: copy .env.example to .env (repo root) and fill it in; the dev profile reads it
 # terminal 1
 cd backend
-./mvnw spring-boot:run          # Windows: mvnw.cmd spring-boot:run
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+# Windows PowerShell: .\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=dev"
 # http://localhost:8080/actuator/health -> {"status":"UP"}
+# http://localhost:8080/api/auth/question -> your question (503 means .env or the dev profile is missing)
 
 # terminal 2
 cd frontend
