@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { LazyMotion, domMax } from 'motion/react'
+import { LazyMotion, MotionGlobalConfig, domMax } from 'motion/react'
 import type { Moment, OpenWorldDetail } from '../../types/api'
 import Postcards from './index'
 
@@ -31,6 +31,14 @@ function setup(n: number) {
 
 const counter = () => document.querySelector('[aria-live="polite"]')?.textContent
 const next = () => fireEvent.click(screen.getByRole('button', { name: 'Send it off, next postcard' }))
+
+// Exit animations finish instantly, so card removal does not depend on machine load (it raced under the full run).
+beforeAll(() => {
+  MotionGlobalConfig.skipAnimations = true
+})
+afterAll(() => {
+  MotionGlobalConfig.skipAnimations = false
+})
 
 beforeEach(() => {
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({

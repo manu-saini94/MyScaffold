@@ -100,6 +100,9 @@ The image runs as a non-root user (uid 10001) with `SPRING_PROFILES_ACTIVE=prod`
 OVERWRITE `X-Forwarded-For` (not append) and send `X-Forwarded-Proto: https`; port 8080 must be reachable only from the
 proxy (compose publishes it on `127.0.0.1`). The session and viewer cookies are `Secure`, so the site works only over
 HTTPS. Rate-limit `/oauth2/**`, `/login/**` and `/api/**` at the proxy; the app limits only unlock attempts.
+With compose and a proxy on the HOST, the container sees the Docker bridge gateway (for example `172.18.0.1`), not
+loopback: set `OURSTORY_TRUSTED_PROXIES` to that address, or every viewer shares one IP and one person's wrong
+answers lock everyone out of unlocking.
 
 **Google OAuth:** in the Cloud Console add both redirect URIs for the production origin:
 `https://YOUR-DOMAIN/login/oauth2/code/google` and `https://YOUR-DOMAIN/login/oauth2/code/google-picker`.

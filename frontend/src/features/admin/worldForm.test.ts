@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { EMPTY_DRAFT, fromLocalInput, slugify, toLocalInput, toWorldRequest, validateDraft } from './worldForm'
+import type { AdminWorld } from './types'
+import { EMPTY_DRAFT, draftFromWorld, fromLocalInput, slugify, toLocalInput, toWorldRequest, validateDraft } from './worldForm'
 
 describe('slugify', () => {
   it('makes kebab-case slugs', () => {
@@ -35,5 +36,19 @@ describe('toWorldRequest', () => {
   it('round-trips the unlock time through the local input', () => {
     const iso = '2027-02-13T18:30:00.000Z'
     expect(fromLocalInput(toLocalInput(iso))).toBe(iso)
+  })
+})
+
+describe('unlockAt with seconds', () => {
+  const world = { slug: 's', title: 'T', layout: 'FILM_STRIP', published: true, unlockAt: '2027-02-13T18:30:45Z' } as AdminWorld
+
+  it('keeps the original instant while the input is untouched', () => {
+    expect(toWorldRequest(draftFromWorld(world)).unlockAt).toBe('2027-02-13T18:30:45Z')
+  })
+
+  it('uses the edited value once the input changes, and null once cleared', () => {
+    const draft = draftFromWorld(world)
+    expect(toWorldRequest({ ...draft, unlockAt: '2027-03-01T09:15' }).unlockAt).toBe(fromLocalInput('2027-03-01T09:15'))
+    expect(toWorldRequest({ ...draft, unlockAt: '' }).unlockAt).toBeNull()
   })
 })

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { skipToken } from '@reduxjs/toolkit/query/react'
 import { AnimatePresence, m } from 'motion/react'
@@ -136,6 +136,27 @@ export function StoryPlayer({ chapters, appTitle, clock = defaultClock }: Props)
     [clock],
   )
   const toggle = useCallback(() => apply((s, t) => setPlaying(s, !s.playing, t)), [apply])
+
+  // A hidden tab holds the slide clock (and with it the music); it resumes on return only if it was playing.
+  const playingRef = useRef(playing)
+  useEffect(() => {
+    playingRef.current = playing
+  }, [playing])
+  useEffect(() => {
+    let heldByHide = false
+    const onVisibility = () => {
+      if (document.hidden) {
+        if (!playingRef.current) return
+        heldByHide = true
+        apply((s, t) => setPlaying(s, false, t))
+      } else if (heldByHide) {
+        heldByHide = false
+        apply((s, t) => setPlaying(s, true, t))
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  }, [apply])
   const goNext = useCallback(() => apply((s, t) => moveTo(s, nextPos(s.pos, outline) ?? s.pos, t)), [apply, outline])
   const goPrev = useCallback(() => apply((s, t) => moveTo(s, prevPos(s.pos, outline), t)), [apply, outline])
   const skip = useCallback(() => apply((s, t) => moveTo(s, nextChapterPos(s.pos, outline), t)), [apply, outline])

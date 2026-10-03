@@ -111,6 +111,7 @@ export function OrbField({ worlds, active, onOpen }: OrbFieldProps) {
               shared={active}
               align={labelAlign(orb.x, size.w - PAD_X * 2)}
               progress={progress[world.slug] ?? 0}
+              covered={!active}
               onOpen={onOpen}
               onHover={() => void preloadWorld()}
             />

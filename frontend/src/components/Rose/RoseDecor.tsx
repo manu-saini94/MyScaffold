@@ -67,7 +67,7 @@ function Item({ p, edge }: { p: Placement; edge: 'top' | 'bottom' }) {
 /** Rose clusters at the top and bottom of the page, gently swaying. Decorative; hidden on Cinema via tokens. */
 export function RoseDecor() {
   return (
-    <div className={styles.decor} aria-hidden="true">
+    <div className={styles.decor} aria-hidden="true" data-home-layer>
       {TOP.map((p, i) => (
         <Item key={`t${i}`} p={p} edge="top" />
       ))}

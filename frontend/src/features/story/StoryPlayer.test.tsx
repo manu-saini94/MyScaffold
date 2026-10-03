@@ -249,3 +249,50 @@ describe('StoryPlayer', () => {
     expect(document.querySelector('[class*="kenBurns"]')).toBeNull()
   })
 })
+
+describe('StoryPlayer in a background tab', () => {
+  let hidden = false
+  const setHidden = (h: boolean) =>
+    act(() => {
+      hidden = h
+      document.dispatchEvent(new Event('visibilitychange'))
+    })
+
+  beforeEach(() => {
+    hidden = false
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => hidden })
+  })
+  afterEach(() => {
+    delete (document as { hidden?: boolean }).hidden
+  })
+
+  it('holds the slide clock and the music while hidden and carries on when visible again', async () => {
+    await startStory()
+    expect(onScreen()).toBe('Chapter 1: First')
+    const pause = vi.mocked(HTMLMediaElement.prototype.pause)
+    pause.mockClear()
+
+    setHidden(true)
+    await flush(TITLE_MS * 3)
+    expect(onScreen()).toMatch(/^Chapter 1: First/)
+    expect(pause).toHaveBeenCalled()
+
+    play.mockClear()
+    setHidden(false)
+    await flush()
+    expect(onScreen()).toBe('Chapter 1: First')
+    expect(play).toHaveBeenCalled()
+    await flush(TITLE_MS + 100)
+    expect(onScreen()).toBe('Photo 1 of 2')
+  })
+
+  it('stays paused on return when the visitor had paused', async () => {
+    await startStory()
+    fireEvent.click(screen.getByRole('button', { name: 'Pause (Space)' }))
+    setHidden(true)
+    await flush(TITLE_MS)
+    setHidden(false)
+    await flush(TITLE_MS * 2)
+    expect(onScreen()).toBe('Chapter 1: First (paused)')
+  })
+})

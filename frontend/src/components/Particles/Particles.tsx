@@ -7,6 +7,8 @@ import styles from './Particles.module.scss'
 interface ParticlesProps {
   /** Changing `kind` swaps the effect in place; the canvas is never remounted. */
   kind: ParticleKind
+  /** Stops the loop (the last frame stays) while something covers the layer, e.g. an open world. */
+  paused?: boolean
 }
 
 const MAX_DPR = 1.75
@@ -17,14 +19,21 @@ function readColors(): [string, string] {
 }
 
 /** Tiny hand-written Canvas 2D particle layer: falling petals (Rose) / rising embers + hearts (Cinema). */
-export function Particles({ kind }: ParticlesProps) {
+export function Particles({ kind, paused = false }: ParticlesProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const kindRef = useRef(kind)
+  const pausedRef = useRef(paused)
+  const syncRef = useRef(() => {})
   const reduced = useReducedMotion()
 
   useEffect(() => {
     kindRef.current = kind
   }, [kind])
+
+  useEffect(() => {
+    pausedRef.current = paused
+    syncRef.current()
+  }, [paused])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -71,22 +80,26 @@ export function Particles({ kind }: ParticlesProps) {
       }
     }
 
-    const onVisibility = () => {
+    // runs only while the tab is visible and nothing covers the layer
+    const sync = () => {
       cancelAnimationFrame(raf)
-      if (!document.hidden) {
+      raf = 0
+      if (!document.hidden && !pausedRef.current) {
         last = performance.now()
         raf = requestAnimationFrame(frame)
       }
     }
 
     resize()
-    raf = requestAnimationFrame(frame)
+    sync()
+    syncRef.current = sync
     window.addEventListener('resize', resize)
-    document.addEventListener('visibilitychange', onVisibility)
+    document.addEventListener('visibilitychange', sync)
     return () => {
+      syncRef.current = () => {}
       cancelAnimationFrame(raf)
       window.removeEventListener('resize', resize)
-      document.removeEventListener('visibilitychange', onVisibility)
+      document.removeEventListener('visibilitychange', sync)
     }
   }, [reduced])
 

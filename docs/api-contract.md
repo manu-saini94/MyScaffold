@@ -23,10 +23,12 @@ is no CORS configuration and cookies are same-site.
 | `/api/experience`, `/api/worlds/**`, `/api/media/**` | 401 | allowed | allowed |
 | `/api/admin/**` | 401 | 403 | allowed |
 | `/actuator/health`, `/oauth2/**`, `/login/**`, `/error`, static assets | allowed | allowed | allowed |
+| `GET`/`HEAD` of an SPA route: extension-less path whose first segment is not `api`, `oauth2`, `login`, `logout`, `actuator`, `assets` or `error` (`/unlock`, `/who`, `/admin/**`, `/world/**`, `/story`, ...) | `200 index.html` (`no-cache`) | same | same |
 | anything else | 401 (anonymous) / 403 | 403 | 403 |
 
 An anonymous call to a protected path is a plain `401` (no redirect, no login page). Anything not listed is denied
-by default.
+by default. The SPA rule only serves the app shell: data still comes from `/api/**` under the rules above, and any
+other method on an SPA route is denied.
 
 ### 1.2 CSRF (applies to EVERY POST, PUT, PATCH, DELETE on every path, no exemptions)
 

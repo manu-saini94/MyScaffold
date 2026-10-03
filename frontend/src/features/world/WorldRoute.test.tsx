@@ -3,7 +3,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 import { MotionGlobalConfig } from 'motion/react'
 import { resetServerClock } from '../../services/serverClock'
-import { PROGRESS_KEY } from './progress'
+import { PROGRESS_KEY } from '../../services/progress'
 import { installDomStubs, json, lockedWorld, openWorld, problem, renderWorldAt, showAll, stubFetch } from './test-support'
 
 // The shell is under test, not a layout: the fixture world's layout is swapped for the simple placeholder grid
@@ -12,7 +12,7 @@ vi.mock('../../worlds/PolaroidTable/index', async () => ({
   default: (await import('../../worlds/_placeholder/PlaceholderLayout')).PlaceholderLayout,
 }))
 
-// The real viewer is covered in components/Lightbox; here it only reports which slide it shows.
+// The viewer is faked here so it only reports which slide it shows; the real yarl viewer runs in WorldRoute.lightbox.test.tsx.
 vi.mock('../../components/Lightbox/LightboxImpl', async () => {
   const { useEffect } = await import('react')
   return {
@@ -73,6 +73,14 @@ describe('WorldRoute shell states', () => {
     expect(calls).toEqual([])
   })
 
+  it('goes home on Escape from the bare world frame', async () => {
+    stubFetch(() => json(openWorld()))
+    renderWorldAt('/world/our-firsts')
+    await screen.findByRole('heading', { name: 'Our Firsts' })
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' })
+    expect(await screen.findByText('launcher')).toBeTruthy()
+  })
+
   it('applies a valid themeAccent as --world-accent and ignores an invalid one', async () => {
     stubFetch(() => json(openWorld()))
     const first = renderWorldAt('/world/our-firsts')
@@ -93,7 +101,7 @@ describe('open world flow', () => {
 
     expect(await screen.findByText('It started with coffee.')).toBeTruthy()
     expect(progress()).toEqual({})
-    fireEvent.click(screen.getByRole('button', { name: 'Skip intro' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
 
     const photos = await screen.findAllByRole('button', { name: /^Open Moment/ })
     expect(photos).toHaveLength(4)
@@ -105,12 +113,18 @@ describe('open world flow', () => {
 
     expect(screen.queryByText('And then there were more.')).toBeNull()
     expect(calls).not.toContain('/api/worlds/our-forever')
-    showAll() // the end of the layout comes into view
-    expect(await screen.findByText('And then there were more.')).toBeTruthy()
+    // the end of the layout comes into view (retried: the end sentinel's observer may not be registered yet)
+    await waitFor(() => {
+      showAll()
+      expect(screen.getByText('And then there were more.')).toBeTruthy()
+    })
     expect(progress()).toEqual({ 'our-firsts': 1 })
 
-    showAll() // the outro comes into view: the next world is prefetched and shown as a locked teaser
-    await waitFor(() => expect(calls).toContain('/api/worlds/our-forever'))
+    // the outro comes into view: the next world is prefetched and shown as a locked teaser
+    await waitFor(() => {
+      showAll()
+      expect(calls).toContain('/api/worlds/our-forever')
+    })
     const next = await screen.findByRole('link', { name: /Next chapter/ })
     await waitFor(() => expect(next.textContent).toContain('Our Forever'))
     expect(next.getAttribute('href')).toBe('/world/our-forever')
@@ -121,10 +135,12 @@ describe('open world flow', () => {
   it('shows the end of the story when there is no next world', async () => {
     stubFetch(() => json(openWorld({ nextSlug: null })))
     renderWorldAt('/world/our-firsts')
-    fireEvent.click(await screen.findByRole('button', { name: 'Skip intro' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Continue' }))
     await screen.findAllByRole('button', { name: /^Open Moment/ })
-    showAll()
-    expect(await screen.findByText('That is every chapter, for now.')).toBeTruthy()
+    await waitFor(() => {
+      showAll()
+      expect(screen.getByText('That is every chapter, for now.')).toBeTruthy()
+    })
     expect(screen.queryByRole('link', { name: /Next chapter/ })).toBeNull()
   })
 
@@ -134,9 +150,11 @@ describe('open world flow', () => {
     })
     stubFetch(() => json(openWorld({ nextSlug: null })))
     renderWorldAt('/world/our-firsts')
-    fireEvent.click(await screen.findByRole('button', { name: 'Skip intro' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Continue' }))
     expect(await screen.findAllByRole('button', { name: /^Open Moment/ })).toHaveLength(4)
-    showAll()
-    expect(await screen.findByText('And then there were more.')).toBeTruthy()
+    await waitFor(() => {
+      showAll()
+      expect(screen.getByText('And then there were more.')).toBeTruthy()
+    })
   })
 })

@@ -9,7 +9,8 @@ import type { ApiLayout } from '../../types/api'
 import { MediaGrid, PickTile } from './MediaGrid'
 import { MomentsEditor } from './MomentsEditor'
 import { fieldErrors } from './problem'
-import { ConfirmButton, Field, ProblemAlert, thumbUrl } from './ui'
+import { ConfirmButton, Field, ProblemAlert } from './ui'
+import { mediaUrl } from '../../services/media'
 import type { AdminWorld } from './types'
 import {
   EMPTY_DRAFT,
@@ -141,7 +142,7 @@ export function WorldEditor({ world }: { world?: AdminWorld }) {
             <span id="cover-label">Cover photo</span>
             <div className={styles.row}>
               {draft.coverMediaId ? (
-                <img className={styles.thumb} src={thumbUrl(draft.coverMediaId)} alt="Current cover" width={80} height={80} />
+                <img className={styles.thumb} src={mediaUrl(draft.coverMediaId, 'thumb')} alt="Current cover" width={80} height={80} />
               ) : (
                 <span className={styles.muted}>No cover (the first photo is used).</span>
               )}

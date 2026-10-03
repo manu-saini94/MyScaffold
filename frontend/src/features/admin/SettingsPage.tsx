@@ -7,7 +7,8 @@ import {
 } from '../../services/adminApi'
 import { MediaGrid, PickTile } from './MediaGrid'
 import { fieldErrors } from './problem'
-import { ConfirmButton, Field, ProblemAlert, thumbUrl } from './ui'
+import { ConfirmButton, Field, ProblemAlert } from './ui'
+import { mediaUrl } from '../../services/media'
 import type { AdminSettings, SettingsUpdate } from './types'
 import styles from './Admin.module.scss'
 
@@ -37,7 +38,7 @@ function SettingsForm({ settings }: { settings: AdminSettings }) {
     tagline: settings.tagline,
     defaultTheme: settings.defaultTheme,
     specialDate: settings.specialDate,
-    unlockQuestion: settings.unlockQuestion,
+    unlockQuestion: settings.unlockQuestion ?? '',
     answers: '',
     heroMediaIds: settings.heroMediaIds,
   })
@@ -59,10 +60,11 @@ function SettingsForm({ settings }: { settings: AdminSettings }) {
       appTitle: draft.appTitle,
       tagline: draft.tagline,
       defaultTheme: draft.defaultTheme,
-      unlockQuestion: draft.unlockQuestion,
       heroMediaIds: draft.heroMediaIds,
     }
     if (draft.specialDate) body.specialDate = draft.specialDate
+    const question = draft.unlockQuestion.trim()
+    if (question && draft.unlockQuestion !== (settings.unlockQuestion ?? '')) body.unlockQuestion = question
     const answers = parseAnswers(draft.answers)
     if (answers.length > 0) body.unlockAnswers = answers
     try {
@@ -127,7 +129,7 @@ function SettingsForm({ settings }: { settings: AdminSettings }) {
           <div className={styles.row}>
             {draft.heroMediaIds.map((id) => (
               <button key={id} type="button" className={styles.tile} style={{ width: '5rem' }} aria-label={`Remove hero photo ${id}`} onClick={() => toggleHero(id)}>
-                <img src={thumbUrl(id)} alt="" width={80} height={80} />
+                <img src={mediaUrl(id, 'thumb')} alt="" width={80} height={80} />
               </button>
             ))}
             <button type="button" className={styles.btnGhost} aria-expanded={picking} onClick={() => setPicking(!picking)}>

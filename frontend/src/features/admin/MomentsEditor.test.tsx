@@ -84,6 +84,25 @@ describe('MomentsEditor', () => {
     expect(screen.queryByRole('alert')).toBeNull()
   })
 
+  it.each([
+    ['reorder', () => fireEvent.click(screen.getByRole('button', { name: 'Move up (photo 3)' }))],
+    ['removal', () => fireEvent.click(screen.getByRole('button', { name: 'Remove (photo 1)' }))],
+    ['edit', () => fireEvent.change(screen.getByLabelText('Place (photo 1)'), { target: { value: 'Goa' } })],
+  ])('drops stale server field errors after a %s', async (_name, act) => {
+    stubFetch(
+      route('GET', momentsPath, () => json(SERVER)),
+      route('PUT', momentsPath, () =>
+        json({ type: 'urn:ourstory:problem:validation-failed', title: 'Bad', status: 400, errors: [{ field: 'moments[1].caption', message: 'too long' }] }, 400),
+      ),
+    )
+    renderAdmin(<MomentsEditor worldId={WORLD} />)
+    await screen.findByLabelText('Caption (photo 2)')
+    fireEvent.click(screen.getByRole('button', { name: 'Save moments' }))
+    await screen.findByText('too long')
+    act()
+    await waitFor(() => expect(screen.queryByText('too long')).toBeNull())
+  })
+
   it('shows a field error next to the moment it belongs to', async () => {
     stubFetch(
       route('GET', momentsPath, () => json(SERVER)),

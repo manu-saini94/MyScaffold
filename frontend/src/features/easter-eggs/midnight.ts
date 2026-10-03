@@ -1,11 +1,11 @@
+import { readStoredTheme, THEME_COLOR } from '../theme/themeSlice'
+
 /**
  * The hidden "midnight" look (Konami code). Kept apart from the theme slice: it is an overlay on whichever theme is
  * active, carried by <html data-midnight="true"> and styled in midnight.scss. Persisted like the theme.
  */
 export const MIDNIGHT_KEY = 'our-story-midnight'
 const MIDNIGHT_BG = '#0c0e2a'
-
-let themeColorBefore: string | null = null
 
 export function isMidnight(): boolean {
   return document.documentElement.dataset.midnight === 'true'
@@ -15,12 +15,12 @@ function apply(on: boolean): void {
   const root = document.documentElement
   const meta = document.querySelector('meta[name="theme-color"]')
   if (on) {
-    if (!isMidnight()) themeColorBefore = meta?.getAttribute('content') ?? null
     root.dataset.midnight = 'true'
     meta?.setAttribute('content', MIDNIGHT_BG)
   } else {
     delete root.dataset.midnight
-    if (themeColorBefore !== null) meta?.setAttribute('content', themeColorBefore)
+    // derived from the theme, not remembered: the pre-paint script may have set data-midnight before we ever ran
+    meta?.setAttribute('content', THEME_COLOR[readStoredTheme()])
   }
 }
 

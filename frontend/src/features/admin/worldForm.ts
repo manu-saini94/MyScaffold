@@ -20,6 +20,8 @@ export interface WorldDraft {
   coverMediaId: string
   themeAccent: string
   unlockAt: string
+  /** The server's instant for `unlockAt`; kept so an untouched input does not drop its seconds. */
+  unlockAtSource: string | null
   introText: string
   outroText: string
   musicUrl: string
@@ -35,6 +37,7 @@ export const EMPTY_DRAFT: WorldDraft = {
   coverMediaId: '',
   themeAccent: '',
   unlockAt: '',
+  unlockAtSource: null,
   introText: '',
   outroText: '',
   musicUrl: '',
@@ -68,11 +71,18 @@ export function draftFromWorld(world: AdminWorld): WorldDraft {
     coverMediaId: world.coverMediaId ?? '',
     themeAccent: world.themeAccent ?? '',
     unlockAt: toLocalInput(world.unlockAt),
+    unlockAtSource: world.unlockAt,
     introText: world.introText ?? '',
     outroText: world.outroText ?? '',
     musicUrl: world.musicUrl ?? '',
     published: world.published,
   }
+}
+
+/** datetime-local has minutes only: while the input still equals the loaded value, keep the original instant. */
+function unlockInstant(draft: WorldDraft): string | null {
+  if (draft.unlockAtSource && draft.unlockAt === toLocalInput(draft.unlockAtSource)) return draft.unlockAtSource
+  return fromLocalInput(draft.unlockAt)
 }
 
 const orNull = (value: string): string | null => (value.trim() === '' ? null : value.trim())
@@ -87,7 +97,7 @@ export function toWorldRequest(draft: WorldDraft): WorldRequest {
     layout: draft.layout,
     coverMediaId: orNull(draft.coverMediaId),
     themeAccent: orNull(draft.themeAccent),
-    unlockAt: fromLocalInput(draft.unlockAt),
+    unlockAt: unlockInstant(draft),
     introText: orNull(draft.introText),
     outroText: orNull(draft.outroText),
     musicUrl: orNull(draft.musicUrl),

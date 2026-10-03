@@ -1,5 +1,5 @@
 import { useMemo, useSyncExternalStore } from 'react'
-import { parseProgress, readProgressRaw, type Progress } from './progress'
+import { parseProgress, readProgressRaw, type Progress } from '../../services/progress'
 
 function subscribe(cb: () => void) {
   window.addEventListener('storage', cb)

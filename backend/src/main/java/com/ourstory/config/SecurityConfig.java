@@ -45,7 +45,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Configuration
 public class SecurityConfig {
 
-    /** Everything the app serves is same-origin; inline script/style are not needed (dev page uses files). */
+    /** Everything the app serves is same-origin; no inline scripts (the theme pre-paint is /assets/theme-init.v1.js). */
     static final String CONTENT_SECURITY_POLICY = "default-src 'self'; img-src 'self' data:; media-src 'self' https:; style-src 'self'; "
             + "script-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
     static final String PERMISSIONS_POLICY = "camera=(), microphone=(), geolocation=()";

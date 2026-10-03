@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from 'react'
 import { useListMediaQuery } from '../../services/adminApi'
 import type { AdminMedia } from './types'
-import { ProblemAlert, thumbUrl } from './ui'
+import { ProblemAlert } from './ui'
+import { mediaUrl } from '../../services/media'
 import styles from './Admin.module.scss'
 
 export const MEDIA_PAGE_SIZE = 60
@@ -78,7 +79,7 @@ export function PickTile({
       disabled={disabled}
       onClick={() => onPick(media)}
     >
-      <img src={thumbUrl(media.id)} alt="" loading="lazy" width={120} height={120} />
+      <img src={mediaUrl(media.id, 'thumb')} alt="" loading="lazy" width={120} height={120} />
     </button>
   )
 }

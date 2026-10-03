@@ -7,7 +7,11 @@ import type { OpenWorldDetail } from '../types'
 import Envelope from './index'
 import { TIMING } from './unfold'
 
-const confetti = vi.hoisted(() => Object.assign(vi.fn(() => null), { shapeFromPath: vi.fn(() => ({ type: 'path' })) }))
+// heartBurst fires through a confetti.create() instance (no worker); `fire` stands for that instance
+const confetti = vi.hoisted(() => {
+  const fire = vi.fn(() => null)
+  return { fire, create: vi.fn(() => fire), shapeFromPath: vi.fn(() => ({ type: 'path' })) }
+})
 vi.mock('canvas-confetti', () => ({ default: confetti }))
 
 function setup(world: OpenWorldDetail) {
@@ -25,7 +29,7 @@ const tick = (ms: number) => act(() => vi.advanceTimersByTimeAsync(ms))
 
 beforeEach(() => {
   vi.useFakeTimers()
-  confetti.mockClear()
+  confetti.fire.mockClear()
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
     matches: false,
     media: query,
@@ -58,12 +62,12 @@ describe('Envelope', () => {
     await tick(800)
     expect(screen.getByRole('button', { name: 'Open Moment 1' })).toBeTruthy()
     expect(screen.getByText('1 / 3')).toBeTruthy()
-    expect(confetti).not.toHaveBeenCalled()
+    expect(confetti.fire).not.toHaveBeenCalled()
 
     fireEvent.click(screen.getByRole('button', { name: 'Next' }))
     await tick(1200)
     expect(screen.getByText('2 / 3')).toBeTruthy()
-    expect(confetti).toHaveBeenCalled()
+    expect(confetti.fire).toHaveBeenCalled()
     expect(confetti.shapeFromPath).toHaveBeenCalled()
 
     // tapping the photo opens the lightbox and pauses the sequence
@@ -80,6 +84,24 @@ describe('Envelope', () => {
     await tick(TIMING.endMs)
     expect(onFinished).toHaveBeenCalled()
     expect(screen.getAllByRole('button', { name: /^Open photo \d/ })).toHaveLength(3)
+  })
+
+  it('holds the sequence while a dialog (a sealed letter) is open over it', async () => {
+    setup(openWorld({ layout: 'ENVELOPE', moments: [moment(1), moment(2)] }))
+    fireEvent.click(screen.getByRole('button', { name: /Break the seal/ }))
+    await tick(TIMING.openMs)
+    expect(screen.getByText('2 photos inside')).toBeTruthy()
+
+    const dialog = document.createElement('div')
+    dialog.setAttribute('role', 'dialog')
+    dialog.setAttribute('aria-modal', 'true')
+    act(() => void document.body.append(dialog))
+    await tick(TIMING.letterMs * 3)
+    expect(screen.getByText('2 photos inside')).toBeTruthy()
+
+    act(() => dialog.remove())
+    await tick(TIMING.letterMs)
+    expect(screen.getByText('1 / 2')).toBeTruthy()
   })
 
   it('finishes at once with a gentle note when there are no photos', () => {

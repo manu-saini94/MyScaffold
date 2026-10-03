@@ -1,5 +1,6 @@
 import { prefersReducedMotion } from '../../hooks/useReducedMotion'
 import { addSparks, createBurst, sparkAlpha, sparkScale, stepSpark, type BurstKind, type Spark } from './burstMath'
+import { heartPath } from '../Particles/particleMath'
 
 /**
  * One shared canvas for every tap burst. Created on first use, and the rAF loop runs only while sparks are alive,
@@ -43,14 +44,6 @@ function ensureCanvas(): CanvasRenderingContext2D | null {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
   }
   return ctx
-}
-
-function heartPath(c: CanvasRenderingContext2D, s: number) {
-  c.beginPath()
-  c.moveTo(0, s * 0.9)
-  c.bezierCurveTo(-s * 1.6, -s * 0.1, -s * 0.7, -s * 1.2, 0, -s * 0.35)
-  c.bezierCurveTo(s * 0.7, -s * 1.2, s * 1.6, -s * 0.1, 0, s * 0.9)
-  c.closePath()
 }
 
 function starPath(c: CanvasRenderingContext2D, s: number) {

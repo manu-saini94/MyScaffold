@@ -10,6 +10,8 @@ export const store = configureStore({
     [api.reducerPath]: api.reducer,
   },
   middleware: (getDefault) => getDefault().concat(api.middleware),
+  // Off in production: DevTools extensions would see mutation arguments such as unlock answers.
+  devTools: import.meta.env.DEV,
 })
 
 export type RootState = ReturnType<typeof store.getState>

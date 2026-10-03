@@ -96,6 +96,13 @@ p {
   z-index: 2;
 }
 
+// An open world covers the home (Shell sets <html data-covered>): its loops (rose sway, orb float, hero sweep, beat and
+// glint) hold still underneath instead of burning frames nobody sees. Marked roots: RoseDecor and the Launcher.
+html[data-covered] [data-home-layer],
+html[data-covered] [data-home-layer] * {
+  animation-play-state: paused !important;
+}
+
 @include reduced-motion {
   *,
   *::before,

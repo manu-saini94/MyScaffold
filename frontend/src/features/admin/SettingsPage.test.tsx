@@ -23,6 +23,28 @@ const SETTINGS = {
 }
 
 describe('SettingsPage', () => {
+  it('saves with no unlock question set: sends no unlockQuestion unless one is typed', async () => {
+    const noQuestion = { ...SETTINGS, unlockQuestion: null, unlockAnswersConfigured: 0 }
+    const calls = stubFetch(
+      route('GET', '/api/admin/settings', () => json(noQuestion)),
+      route('PUT', '/api/admin/settings', () => json(noQuestion)),
+    )
+    renderAdmin(<SettingsPage />)
+    const question = (await screen.findByLabelText('Unlock question')) as HTMLInputElement
+    expect(question.value).toBe('')
+    fireEvent.change(screen.getByLabelText('App title'), { target: { value: 'New title' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save settings' }))
+    await screen.findByText('Settings saved.')
+    const body = calls.find((c) => c.method === 'PUT')!.body as Record<string, unknown>
+    expect(body).toMatchObject({ appTitle: 'New title' })
+    expect(body).not.toHaveProperty('unlockQuestion')
+
+    fireEvent.change(question, { target: { value: '  Sample question? ' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save settings' }))
+    await waitFor(() => expect(calls.filter((c) => c.method === 'PUT')).toHaveLength(2))
+    expect((calls.filter((c) => c.method === 'PUT')[1]!.body as Record<string, unknown>).unlockQuestion).toBe('Sample question?')
+  })
+
   it('never pre-fills answers and says only how many are configured', async () => {
     stubFetch(route('GET', '/api/admin/settings', () => json(SETTINGS)))
     renderAdmin(<SettingsPage />)

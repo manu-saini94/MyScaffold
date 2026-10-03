@@ -7,6 +7,7 @@ import { LibraryPage } from './LibraryPage'
 import { SettingsPage } from './SettingsPage'
 import { WorldsPage } from './WorldsPage'
 import { errorStatus } from './problem'
+import { useAdminSignOutMutation } from './sessionApi'
 import styles from './Admin.module.scss'
 
 const GOOGLE_LOGIN = '/oauth2/authorization/google'
@@ -25,9 +26,10 @@ function Notice({ title, children }: { title: string; children: ReactNode }) {
 /** The admin app, mounted at /admin/*. A Google session, not a viewer session: it has its own sign-in states. */
 export default function AdminApp() {
   const { data: me, error, isLoading, refetch } = useGetAdminMeQuery()
+  const [signOut, signingOut] = useAdminSignOutMutation()
 
   if (isLoading) return <Notice title="Admin"><p role="status">Checking sign-in...</p></Notice>
-  if (!me) {
+  if (!me || errorStatus(error) === 401) {
     const status = errorStatus(error)
     if (status === 401)
       return (
@@ -75,6 +77,9 @@ export default function AdminApp() {
           <NavLink to="/admin/settings">Settings</NavLink>
         </nav>
         <span className={styles.who}>{me.name ?? me.email}</span>
+        <button type="button" className={styles.btnGhost} disabled={signingOut.isLoading} onClick={() => void signOut()}>
+          Sign out
+        </button>
       </header>
       <main>
         <Routes>

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { useLocation, useOutlet } from 'react-router-dom'
 import { AnimatePresence } from 'motion/react'
 import { ClickEffects } from '../components/ClickEffects/ClickEffects'
@@ -23,15 +23,27 @@ export function Shell() {
   const location = useLocation()
   const outlet = useOutlet()
   const nicknames = useGetExperienceQuery().data?.easterEggNicknames
+  const covered = !!outlet
+
+  // An open world covers the home: <html data-covered> pauses the home's CSS loops (global.scss), the particle loop
+  // and the locked-orb countdowns stop too. All resume when the world closes.
+  useEffect(() => {
+    if (!covered) return
+    const root = document.documentElement
+    root.dataset.covered = 'true'
+    return () => {
+      delete root.dataset.covered
+    }
+  }, [covered])
 
   return (
     <>
       <RoseDecor />
-      <Particles kind={kind} />
+      <Particles kind={kind} paused={covered} />
       <ClickEffects />
       <EasterEggs nicknames={nicknames ?? []} />
       <Header />
-      <Launcher active={!outlet} />
+      <Launcher active={!covered} />
       <AnimatePresence>{outlet && <Frozen key={location.pathname}>{outlet}</Frozen>}</AnimatePresence>
     </>
   )

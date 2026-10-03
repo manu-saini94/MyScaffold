@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { m } from 'motion/react'
 import { useReducedMotion } from '../../hooks/useReducedMotion'
 import type { Spark } from '../../components/ClickEffects/burstMath'
+import { heartPath } from '../../components/Particles/particleMath'
 import { RAIN_PER_SECOND, RAIN_SPAWN_MS, rainAlpha, spawnRain, stepRain } from './rainMath'
 import styles from './EasterEggs.module.scss'
 
@@ -10,14 +11,6 @@ export const RAIN_TOTAL_MS = 4200
 /** The reduced-motion pulse. */
 export const PULSE_MS = 1800
 const MAX_DPR = 1.75
-
-function heartPath(c: CanvasRenderingContext2D, s: number) {
-  c.beginPath()
-  c.moveTo(0, s * 0.9)
-  c.bezierCurveTo(-s * 1.6, -s * 0.1, -s * 0.7, -s * 1.2, 0, -s * 0.35)
-  c.bezierCurveTo(s * 0.7, -s * 1.2, s * 1.6, -s * 0.1, 0, s * 0.9)
-  c.closePath()
-}
 
 /** Runs the rain on `canvas` until it has fallen through; returns a stop function. */
 function runRain(canvas: HTMLCanvasElement, c: CanvasRenderingContext2D): () => void {

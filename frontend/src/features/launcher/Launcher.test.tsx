@@ -5,7 +5,7 @@ import { LazyMotion, domMax } from 'motion/react'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import type { World } from '../../types/world'
 import { Launcher } from './Launcher'
-import { PROGRESS_KEY } from './progress'
+import { PROGRESS_KEY } from '../../services/progress'
 import { WORLDS_MOCK } from './worldsMock'
 
 vi.mock('../world/preload', () => ({ preloadWorld: vi.fn(() => Promise.resolve()) }))

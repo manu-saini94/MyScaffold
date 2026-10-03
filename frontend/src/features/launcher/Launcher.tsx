@@ -14,7 +14,7 @@ export function Launcher({ active }: { active: boolean }) {
   const onOpen = useCallback((w: World) => void navigate(`/world/${w.slug}`), [navigate])
 
   return (
-    <main className={styles.launcher}>
+    <main className={styles.launcher} data-home-layer>
       <Hero title={appTitle} tagline={tagline} />
       {isError ? <LoadFailed onRetry={refetch} /> : <OrbField worlds={worlds} active={active} onOpen={onOpen} />}
     </main>

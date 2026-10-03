@@ -3,6 +3,9 @@ import type { ThemeName } from '../../types/world'
 
 const STORAGE_KEY = 'our-story-theme'
 
+/** <meta name="theme-color"> per theme (the page background). */
+export const THEME_COLOR: Readonly<Record<ThemeName, string>> = { rose: '#ffffff', cinema: '#141414' }
+
 export function readStoredTheme(): ThemeName {
   return document.documentElement.dataset.theme === 'cinema' ? 'cinema' : 'rose'
 }
@@ -20,7 +23,7 @@ export function hasStoredTheme(): boolean {
 /** Writes the theme to <html> and localStorage. Safe if storage is blocked. */
 export function applyTheme(theme: ThemeName): void {
   document.documentElement.dataset.theme = theme
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'rose' ? '#ffffff' : '#141414')
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_COLOR[theme])
   try {
     localStorage.setItem(STORAGE_KEY, theme)
   } catch {

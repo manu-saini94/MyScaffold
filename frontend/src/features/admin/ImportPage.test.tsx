@@ -80,15 +80,18 @@ describe('ImportPage', () => {
     expect(link.getAttribute('href')).toBe('/oauth2/authorization/google-picker')
   })
 
-  it('refuses an off-site authorizeUrl', async () => {
+  it.each(['https://evil.example/x', '/\\evil.example/x', '//evil.example/x', '/oauth2/authorization/google'])(
+    'refuses an authorizeUrl other than the picker reconnect path: %s',
+    async (authorizeUrl) => {
     stubFetch(
       route('POST', '/api/admin/picker/sessions', () =>
-        problem('google-reconnect-required', 409, { authorizeUrl: 'https://evil.example/x' }),
+        problem('google-reconnect-required', 409, { authorizeUrl }),
       ),
     )
     renderAdmin(<ImportPage />)
     fireEvent.click(screen.getByRole('button', { name: 'Create picker session' }))
     await screen.findByRole('alert')
     expect(screen.queryByRole('link', { name: 'Reconnect Google Photos' })).toBeNull()
-  })
+  },
+  )
 })

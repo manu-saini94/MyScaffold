@@ -36,7 +36,7 @@ describe('locked world', () => {
 
     act(() => vi.advanceTimersByTime(1000))
     await vi.waitFor(() => expect(calls).toHaveLength(2))
-    expect(await screen.findByRole('button', { name: 'Skip intro' })).toBeTruthy()
+    expect(await screen.findByRole('button', { name: 'Continue' })).toBeTruthy()
   })
 
   it('keeps asking while the server still says locked after zero', async () => {

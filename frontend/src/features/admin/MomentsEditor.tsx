@@ -19,7 +19,8 @@ import { useGetMomentsQuery, useReplaceMomentsMutation } from '../../services/ad
 import { MediaGrid, PickTile } from './MediaGrid'
 import { fromMedia, fromServer, move, toMomentInputs, type EditableMoment } from './momentsModel'
 import { fieldErrors, readAdminProblem } from './problem'
-import { ProblemAlert, thumbUrl } from './ui'
+import { ProblemAlert } from './ui'
+import { mediaUrl } from '../../services/media'
 import styles from './Admin.module.scss'
 
 const MAX_MOMENTS = 500
@@ -49,7 +50,7 @@ function MomentRow({ item, index, count, errors, onChange, onMove, onRemove }: R
       style={{ transform: CSS.Transform.toString(transform), transition }}
     >
       <div className={styles.momentSide}>
-        <img className={styles.thumb} src={thumbUrl(item.mediaId)} alt="" width={80} height={80} loading="lazy" />
+        <img className={styles.thumb} src={mediaUrl(item.mediaId, 'thumb')} alt="" width={80} height={80} loading="lazy" />
         <button
           type="button"
           ref={setActivatorNodeRef}
@@ -143,6 +144,7 @@ function MomentsList({ worldId, initial, onReload }: { worldId: string; initial:
 
   const edit = (next: EditableMoment[]) => {
     setItems(next)
+    result.reset()
     setSaved(false)
   }
   const onDragEnd = ({ active, over }: DragEndEvent) => {

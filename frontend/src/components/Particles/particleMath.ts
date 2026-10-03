@@ -50,7 +50,8 @@ function petalPath(ctx: CanvasRenderingContext2D, s: number, flip: number) {
   ctx.closePath()
 }
 
-function heartPath(ctx: CanvasRenderingContext2D, s: number) {
+/** The shared canvas heart, centred on the origin, about 2s tall. Used by particles, click hearts and the heart rain. */
+export function heartPath(ctx: CanvasRenderingContext2D, s: number) {
   ctx.beginPath()
   ctx.moveTo(0, s * 0.9)
   ctx.bezierCurveTo(-s * 1.6, -s * 0.1, -s * 0.7, -s * 1.2, 0, -s * 0.35)

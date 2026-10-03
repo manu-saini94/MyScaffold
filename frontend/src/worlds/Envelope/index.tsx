@@ -2,6 +2,7 @@ import '@fontsource/fraunces/latin-400-italic.css'
 import { useCallback, useEffect, useReducer, useRef } from 'react'
 import { m } from 'motion/react'
 import { ProgressiveImage } from '../../components/ProgressiveImage/ProgressiveImage'
+import { useModalOpen } from '../../features/world/useModalOpen'
 import { useReducedMotion } from '../../hooks/useReducedMotion'
 import { mediaUrl } from '../../services/media'
 import type { WorldLayoutProps } from '../types'
@@ -21,12 +22,14 @@ export default function Envelope({ world, onFinished, onOpenPhoto }: WorldLayout
   const { stage, shown, total, playing } = state
   const empty = moments.length === 0
 
+  // a letter (or any dialog) opened over the envelope holds the sequence; the step restarts once it closes
+  const modalOpen = useModalOpen()
   useEffect(() => {
     const delay = autoDelay(state, reduced ? REDUCED_TIMING : TIMING)
-    if (delay === null) return
+    if (delay === null || modalOpen) return
     const timer = window.setTimeout(() => dispatch({ type: 'advance' }), delay)
     return () => window.clearTimeout(timer)
-  }, [state, reduced])
+  }, [state, reduced, modalOpen])
 
   useEffect(() => {
     if (stage === 'done' || empty) onFinished()

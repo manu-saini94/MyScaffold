@@ -10,8 +10,11 @@ export interface AdminProblem {
 const PREFIX = 'urn:ourstory:problem:'
 const record = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null
 
+// The only reconnect target the backend sends (GoogleReconnectRequiredException.AUTHORIZE_URL); anything else is ignored.
+const PICKER_AUTHORIZE_URL = '/oauth2/authorization/google-picker'
+
 function localPath(value: unknown): string | null {
-  return typeof value === 'string' && value.startsWith('/') && !value.startsWith('//') ? value : null
+  return value === PICKER_AUTHORIZE_URL ? value : null
 }
 
 /** Narrows an RTK Query error into an RFC 7807 view (contract 1.3). Null for network errors and untyped bodies. */
@@ -40,7 +43,10 @@ export function errorStatus(error: unknown): number | null {
   return record(error) && typeof error.status === 'number' ? error.status : null
 }
 
+export const SESSION_EXPIRED = 'Your session expired.'
+
 export function describeError(error: unknown): string {
+  if (errorStatus(error) === 401) return SESSION_EXPIRED
   const problem = readAdminProblem(error)
   if (problem) return problem.detail ?? `Request failed (${problem.code}).`
   if (record(error) && error.status === 'FETCH_ERROR') return 'Cannot reach the server.'

@@ -8,7 +8,7 @@ import { SealedLetters } from '../letters'
 import { IntroCard } from './IntroCard'
 import { LayoutBoundary } from './LayoutBoundary'
 import { Outro } from './Outro'
-import { recordProgress } from './progress'
+import { recordProgress } from '../../services/progress'
 import styles from './World.module.scss'
 
 /** Progress written as soon as the viewer is past the intro, so the home ring shows "started". */

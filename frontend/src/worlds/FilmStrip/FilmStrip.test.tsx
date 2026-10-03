@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { LazyMotion, domMax } from 'motion/react'
 import { installDomStubs, moment, openWorld, showAll } from '../../features/world/test-support'
 import type { Moment } from '../../types/api'
@@ -30,11 +30,13 @@ describe('FilmStrip', () => {
     expect(onOpenPhoto).toHaveBeenCalledWith(1)
   })
 
-  it('finishes once the end of the roll is in view', () => {
+  it('finishes once the end of the roll is in view', async () => {
     const { onFinished } = renderStrip([moment(1), moment(2)])
     expect(onFinished).not.toHaveBeenCalled()
-    showAll()
-    expect(onFinished).toHaveBeenCalledTimes(1)
+    await waitFor(() => {
+      showAll()
+      expect(onFinished).toHaveBeenCalledTimes(1)
+    })
   })
 
   it('shows date stamps, frame numbers and a frame counter', () => {

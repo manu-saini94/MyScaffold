@@ -22,6 +22,8 @@ interface WorldOrbProps {
   shared: boolean
   /** 0..1 from the world shell; 0 hides the ring. */
   progress: number
+  /** True while an open world covers the home: the countdown stops ticking. */
+  covered: boolean
   /** Where the title card hangs: from the orb centre, or from its outer side near a field edge. */
   align: 'start' | 'center' | 'end'
   onOpen: (world: World) => void
@@ -56,8 +58,8 @@ function Photo({ photo, size }: { photo: OrbPhoto; size: number }) {
   )
 }
 
-function LockedFace({ unlockAt }: { unlockAt: string | null }) {
-  const r = useCountdown(unlockAt)
+function LockedFace({ unlockAt, covered }: { unlockAt: string | null; covered: boolean }) {
+  const r = useCountdown(unlockAt, !covered)
   return (
     <span className={styles.frost}>
       <LockGlyph className={styles.lock} />
@@ -87,7 +89,7 @@ function ProgressRing({ value }: { value: number }) {
 }
 
 /** One round world on the home: a photo from inside it (or a gradient), floating; frosted with a countdown when locked. */
-export function WorldOrb({ world, orb, index, locked, shared, progress, align, onOpen, onHover }: WorldOrbProps) {
+export function WorldOrb({ world, orb, index, locked, shared, progress, covered, align, onOpen, onHover }: WorldOrbProps) {
   const [peek, setPeek] = useState(false)
   const press = useRef<{ timer: number; fired: boolean }>({ timer: 0, fired: false })
   const labelId = useId()
@@ -157,7 +159,7 @@ export function WorldOrb({ world, orb, index, locked, shared, progress, align, o
           ) : (
             !locked && <WorldGlyph kind={world.layout} className={styles.glyph} />
           )}
-          {locked && <LockedFace unlockAt={world.unlockAt} />}
+          {locked && <LockedFace unlockAt={world.unlockAt} covered={covered} />}
           {pct > 0 && !locked && <ProgressRing value={progress} />}
         </button>
         <div className={styles.label} id={labelId}>

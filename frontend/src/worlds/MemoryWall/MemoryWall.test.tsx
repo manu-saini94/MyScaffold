@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { LazyMotion, domMax } from 'motion/react'
 import { installDomStubs, moment, openWorld, showAll } from '../../features/world/test-support'
 import type { Moment } from '../../types/api'
@@ -37,11 +37,13 @@ describe('MemoryWall', () => {
     expect(screen.getByText('Moment 1')).toBeTruthy()
   })
 
-  it('finishes once the bottom of the wall is in view', () => {
+  it('finishes once the bottom of the wall is in view', async () => {
     const { onFinished } = renderWall([moment(1), moment(2)])
     expect(onFinished).not.toHaveBeenCalled()
-    showAll()
-    expect(onFinished).toHaveBeenCalledTimes(1)
+    await waitFor(() => {
+      showAll()
+      expect(onFinished).toHaveBeenCalledTimes(1)
+    })
   })
 
   it('names uncaptioned photos by position', () => {

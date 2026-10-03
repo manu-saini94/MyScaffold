@@ -154,7 +154,7 @@ export interface AdminSettings {
   myName: string
   easterEggNicknames: string[]
   heroMediaIds: string[]
-  unlockQuestion: string
+  unlockQuestion: string | null
   unlockAnswersConfigured: number
 }
 

@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { useAppDispatch } from '../../app/hooks'
 import { adminApi, useDeleteMediaMutation, useListWorldsQuery } from '../../services/adminApi'
 import { MediaGrid } from './MediaGrid'
-import { ConfirmButton, ProblemAlert, thumbUrl } from './ui'
+import { ConfirmButton, ProblemAlert } from './ui'
+import { mediaUrl } from '../../services/media'
 import styles from './Admin.module.scss'
 
 /** Ids of every photo used by some world. The API has no unassigned filter yet, so it is computed here. */
@@ -54,7 +55,7 @@ export function LibraryPage() {
           <div className={styles.cell}>
             <img
               className={styles.libThumb}
-              src={thumbUrl(m.id)}
+              src={mediaUrl(m.id, 'thumb')}
               alt={m.filename ?? 'Photo'}
               loading="lazy"
               width={120}
