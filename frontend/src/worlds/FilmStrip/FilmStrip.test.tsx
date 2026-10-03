@@ -63,14 +63,38 @@ describe('FilmStrip', () => {
   })
 
   it('falls back to a plain strip without the light leak under reduced motion', () => {
-    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-      matches: query.includes('reduce'),
-      media: query,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-    }))
+    preferReducedMotion()
     const { container } = renderStrip([moment(1), moment(2)])
     expect(container.querySelector('section')?.hasAttribute('data-reduced')).toBe(true)
     expect(screen.getByText(/Swipe the strip/)).toBeTruthy()
   })
+
+  it('under reduced motion, stepping to the last frame with Next finishes the roll', () => {
+    preferReducedMotion()
+    const { container, onFinished } = renderStrip([moment(1), moment(2), moment(3)])
+    const next = screen.getByRole('button', { name: 'Next frame' })
+    fireEvent.click(next)
+    expect(onFinished).not.toHaveBeenCalled()
+    fireEvent.click(next)
+    expect(container.querySelector('[aria-live]')?.textContent).toContain('03')
+    expect(next).toHaveProperty('disabled', true)
+    expect(onFinished).toHaveBeenCalledTimes(1)
+  })
+
+  it('finishes only once when the last frame and the end of the roll both arrive', () => {
+    preferReducedMotion()
+    const { onFinished } = renderStrip([moment(1), moment(2)])
+    fireEvent.click(screen.getByRole('button', { name: 'Next frame' }))
+    showAll()
+    expect(onFinished).toHaveBeenCalledTimes(1)
+  })
 })
+
+function preferReducedMotion() {
+  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+    matches: query.includes('reduce'),
+    media: query,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }))
+}

@@ -169,6 +169,10 @@ export function WorldOrb({ world, orb, index, locked, shared, progress, covered,
           </p>
           {pct > 0 && !locked && <p className={styles.seen}>{pct}% seen</p>}
         </div>
+        {/* always-on name for touch / narrow screens (no hover there); the button already carries the name */}
+        <span className={styles.nameTag} data-name-tag aria-hidden="true">
+          {world.title}
+        </span>
       </div>
     </div>
   )

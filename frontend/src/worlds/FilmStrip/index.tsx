@@ -1,11 +1,11 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type FocusEvent } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type FocusEvent } from 'react'
 import { m, useMotionValue, useMotionValueEvent, useScroll, useTransform } from 'motion/react'
 import { ProgressiveImage } from '../../components/ProgressiveImage/ProgressiveImage'
 import { useOnVisible } from '../../features/world/useOnVisible'
 import { useReducedMotion } from '../../hooks/useReducedMotion'
 import type { Moment } from '../../types/api'
 import type { WorldLayoutProps } from '../types'
-import { activeFrame, dateStamp, frameAspect, frameNumber, offsetForFrame, stripTravel } from './filmMath'
+import { dateStamp, frameAspect, frameNumber, nearestFrame, offsetForFrame, stripTravel } from './filmMath'
 import { useScrollParent } from '../../features/world/scrollParent'
 import styles from './FilmStrip.module.scss'
 
@@ -48,8 +48,20 @@ function Reel({ world, onFinished, onOpenPhoto }: WorldLayoutProps) {
   const x = useTransform(() => -scrollYProgress.get() * travel.get())
   const [travelPx, setTravelPx] = useState(0)
   const [active, setActive] = useState(0)
+  /** Frame centres, px from the track's left edge; refreshed whenever the window or the track resizes. */
+  const centers = useRef<number[]>([])
 
-  useOnVisible(endRef, onFinished)
+  // Two ways to finish, whichever comes first: the last frame becomes the active one, or the end of the roll is seen.
+  const finished = useRef(false)
+  const finish = useCallback(() => {
+    if (finished.current) return
+    finished.current = true
+    onFinished()
+  }, [onFinished])
+  useOnVisible(endRef, finish)
+  useEffect(() => {
+    if (active === count - 1) finish()
+  }, [active, count, finish])
 
   useLayoutEffect(() => {
     const win = windowRef.current
@@ -59,6 +71,7 @@ function Reel({ world, onFinished, onOpenPhoto }: WorldLayoutProps) {
       const next = stripTravel(track.scrollWidth, win.clientWidth)
       travel.set(next)
       setTravelPx(next)
+      centers.current = [...track.querySelectorAll<HTMLElement>('[data-frame]')].map((c) => c.offsetLeft + c.offsetWidth / 2)
     }
     measure()
     if (typeof ResizeObserver === 'undefined') return
@@ -68,14 +81,16 @@ function Reel({ world, onFinished, onOpenPhoto }: WorldLayoutProps) {
     return () => ro.disconnect()
   }, [travel])
 
+  // the window's centre, in track coordinates, is how far the track has moved plus half the window
   useMotionValueEvent(scrollYProgress, 'change', (p) => {
-    if (!reduced) setActive(activeFrame(p, count))
+    const win = windowRef.current
+    if (!reduced && win) setActive(nearestFrame(centers.current, p * travel.get() + win.clientWidth / 2))
   })
 
   const onStripScroll = () => {
     const win = windowRef.current
     if (!reduced || !win) return
-    setActive(activeFrame(win.scrollLeft / Math.max(1, win.scrollWidth - win.clientWidth), count))
+    setActive(nearestFrame(centers.current, win.scrollLeft + win.clientWidth / 2))
   }
 
   const goTo = (index: number) => {
@@ -85,6 +100,8 @@ function Reel({ world, onFinished, onOpenPhoto }: WorldLayoutProps) {
     if (!win || !cell) return
     const center = cell.offsetLeft + cell.offsetWidth / 2
     if (reduced) {
+      // the arrows select at once; the instant scroll that follows lands on the same frame
+      setActive(i)
       win.scrollTo?.({ left: offsetForFrame(0, center, win.clientWidth, win.scrollWidth - win.clientWidth) })
       return
     }

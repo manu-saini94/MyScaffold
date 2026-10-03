@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { activeFrame, dateStamp, frameAspect, frameNumber, offsetForFrame, stripTravel } from './filmMath'
+import { dateStamp, frameAspect, frameNumber, nearestFrame, offsetForFrame, stripTravel } from './filmMath'
 
 describe('frameAspect', () => {
   it('keeps ordinary shapes and clamps extremes', () => {
@@ -21,19 +21,25 @@ describe('stripTravel', () => {
   })
 })
 
-describe('activeFrame', () => {
-  it('maps progress onto frame indices', () => {
-    expect(activeFrame(0, 14)).toBe(0)
-    expect(activeFrame(0.5, 5)).toBe(2)
-    expect(activeFrame(1, 14)).toBe(13)
+describe('nearestFrame', () => {
+  // frames of uneven width: centres at 100, 420, 700, 1100
+  const centers = [100, 420, 700, 1100]
+
+  it('picks the frame whose centre is nearest the viewport centre, not the one left of it', () => {
+    expect(nearestFrame(centers, 600)).toBe(2) // 420 is left of centre but 700 is nearer
+    expect(nearestFrame(centers, 500)).toBe(1)
+    expect(nearestFrame(centers, 1000)).toBe(3)
   })
 
-  it('clamps bad input and tiny strips', () => {
-    expect(activeFrame(-1, 5)).toBe(0)
-    expect(activeFrame(7, 5)).toBe(4)
-    expect(activeFrame(Number.NaN, 5)).toBe(0)
-    expect(activeFrame(0.7, 1)).toBe(0)
-    expect(activeFrame(0.7, 0)).toBe(0)
+  it('clamps to the ends', () => {
+    expect(nearestFrame(centers, -500)).toBe(0)
+    expect(nearestFrame(centers, 9000)).toBe(3)
+  })
+
+  it('keeps the earlier frame on an exact tie, and handles empty or broken input', () => {
+    expect(nearestFrame([0, 200], 100)).toBe(0)
+    expect(nearestFrame([], 100)).toBe(0)
+    expect(nearestFrame(centers, Number.NaN)).toBe(0)
   })
 })
 

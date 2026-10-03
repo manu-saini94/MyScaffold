@@ -271,6 +271,52 @@
   color: var(--accent);
 }
 
+// Touch / narrow screens have no hover, so every orb wears its name. The tag lives inside the orb's slot (the
+// scatter footprint): the disc gives up $tag-room at the bottom and the tag overlaps the disc's lower edge a little.
+$tag-room: 1.05rem;
+$tag-overlap: 0.55rem;
+
+.nameTag {
+  display: none;
+}
+
+@media (max-width: 600px), (hover: none) {
+  .orb {
+    width: calc(100% - #{$tag-room});
+    height: calc(100% - #{$tag-room});
+    margin-inline: auto;
+  }
+
+  .nameTag {
+    position: absolute;
+    top: calc(100% - #{$tag-room} - #{$tag-overlap});
+    left: 50%;
+    z-index: 1;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    width: max-content;
+    // never wider than the slot plus a sliver: neighbouring slots are at least the scatter gap (14px) apart
+    max-width: calc(100% + 10px);
+    padding: 0.16rem 0.6rem 0.2rem;
+    border-radius: 999px;
+    translate: -50% 0;
+    font-family: var(--font-display);
+    font-size: 0.76rem;
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: 0.01em;
+    text-align: center;
+    text-wrap: balance;
+    color: var(--text);
+    pointer-events: none;
+    @include glass;
+    border-color: color-mix(in srgb, var(--gold-2) 55%, transparent);
+    box-shadow: 0 2px 10px -4px var(--gold-glow);
+  }
+}
+
 @keyframes orb-in {
   from {
     opacity: 0;

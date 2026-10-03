@@ -23,12 +23,18 @@ describe('AdminApp sign-in states', () => {
     renderAdmin(mounted)
     const link = await screen.findByRole('link', { name: 'Sign in with Google' })
     expect(link.getAttribute('href')).toBe('/oauth2/authorization/google')
+    expect(screen.queryByText(/viewing as a guest/i)).toBeNull()
   })
 
-  it('403 says the account is not the admin and offers no import UI', async () => {
+  // the server never keeps a session for a non-admin Google account, so a 403 here is always a viewer (guest) session
+  it('403 (a viewer session) offers the same Google sign-in with a guest note, never "not the admin"', async () => {
     stubFetch(route('GET', '/api/admin/me', () => problem('forbidden', 403)))
     renderAdmin(mounted)
-    expect(await screen.findByText(/not allowed to use the admin area/i)).toBeTruthy()
+    const link = await screen.findByRole('link', { name: 'Sign in with Google' })
+    expect(link.getAttribute('href')).toBe('/oauth2/authorization/google')
+    expect(screen.getByText("You're viewing as a guest.")).toBeTruthy()
+    expect(screen.queryByText(/not allowed/i)).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Not the admin' })).toBeNull()
     expect(screen.queryByRole('navigation', { name: 'Admin sections' })).toBeNull()
   })
 

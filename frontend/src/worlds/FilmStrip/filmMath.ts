@@ -16,12 +16,22 @@ export function stripTravel(trackWidth: number, viewportWidth: number): number {
   return Math.max(0, Math.round(trackWidth - viewportWidth))
 }
 
-const clamp01 = (n: number) => (Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0)
-
-/** Index of the frame nearest to scroll progress `progress` (0..1) on a strip of `count` frames. */
-export function activeFrame(progress: number, count: number): number {
-  if (count <= 1) return 0
-  return Math.round(clamp01(progress) * (count - 1))
+/**
+ * Index of the frame whose centre is nearest the viewport centre (both measured from the track's left edge).
+ * Frames differ in width, so this is not a linear map of scroll progress. Ties keep the earlier frame.
+ */
+export function nearestFrame(centers: readonly number[], viewportCenter: number): number {
+  if (!Number.isFinite(viewportCenter)) return 0
+  let best = 0
+  let bestDistance = Infinity
+  centers.forEach((c, i) => {
+    const d = Math.abs(c - viewportCenter)
+    if (d < bestDistance) {
+      bestDistance = d
+      best = i
+    }
+  })
+  return best
 }
 
 /**

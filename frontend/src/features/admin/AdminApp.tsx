@@ -31,24 +31,16 @@ export default function AdminApp() {
   if (isLoading) return <Notice title="Admin"><p role="status">Checking sign-in...</p></Notice>
   if (!me || errorStatus(error) === 401) {
     const status = errorStatus(error)
-    if (status === 401)
+    // 401: no session. 403: a viewer (unlock) session. The server never keeps a session for a non-admin Google
+    // account (it is signed out at login and shown a 403 page), so both mean "not signed in with Google as admin".
+    if (status === 401 || status === 403)
       return (
         <Notice title="Admin sign-in">
+          {status === 403 && <p className={styles.muted}>You're viewing as a guest.</p>}
           <p>Sign in with the admin Google account to curate the gallery.</p>
           <p>
             <a className={styles.btn} href={GOOGLE_LOGIN}>
               Sign in with Google
-            </a>
-          </p>
-        </Notice>
-      )
-    if (status === 403)
-      return (
-        <Notice title="Not the admin">
-          <p role="alert">This Google account is not allowed to use the admin area.</p>
-          <p>
-            <a className={styles.btnGhost} href={GOOGLE_LOGIN}>
-              Try another account
             </a>
           </p>
         </Notice>
