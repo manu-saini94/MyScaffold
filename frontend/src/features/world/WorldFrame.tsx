@@ -2,12 +2,16 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { m } from 'motion/react'
 import { safeHex } from '../../services/media'
+import { MusicToggle } from './MusicToggle'
+import { useWorldMusic } from './useWorldMusic'
 import styles from './World.module.scss'
 
 interface WorldFrameProps {
   slug: string
   /** themeAccent from the API; anything but #rrggbb falls back to the theme accent. */
   accent: string | null | undefined
+  /** musicUrl of the world on screen: undefined while unknown (loading), null for none (or locked). */
+  musicUrl: string | null | undefined
   children: ReactNode
 }
 
@@ -16,8 +20,9 @@ interface WorldFrameProps {
  * frame (even while loading) and the orb can expand into it. Escape and the back control return home.
  * Closing a deep-linked world fades it out instead (no shared element was set up).
  */
-export function WorldFrame({ slug, accent, children }: WorldFrameProps) {
+export function WorldFrame({ slug, accent, musicUrl, children }: WorldFrameProps) {
   const navigate = useNavigate()
+  useWorldMusic(musicUrl)
   const frameRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
@@ -67,6 +72,7 @@ export function WorldFrame({ slug, accent, children }: WorldFrameProps) {
             </svg>
             All chapters
           </Link>
+          <MusicToggle />
         </nav>
         {children}
       </m.div>

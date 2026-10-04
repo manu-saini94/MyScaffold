@@ -11,6 +11,7 @@ import { MomentsEditor } from './MomentsEditor'
 import { fieldErrors } from './problem'
 import { ConfirmButton, Field, ProblemAlert } from './ui'
 import { mediaUrl } from '../../services/media'
+import { BUNDLED_SONGS } from '../../services/music'
 import type { AdminWorld } from './types'
 import {
   EMPTY_DRAFT,
@@ -64,12 +65,12 @@ export function WorldEditor({ world }: { world?: AdminWorld }) {
     }
   }
 
-  const text = (key: 'title' | 'subtitle' | 'tagline' | 'musicUrl', label: string, extra?: { wide?: boolean; type?: string; hint?: string }) => (
+  const text = (key: 'title' | 'subtitle' | 'tagline', label: string, extra?: { wide?: boolean; hint?: string }) => (
     <Field label={label} error={errors[key]} hint={extra?.hint} className={extra?.wide ? styles.wide : undefined}>
       {(p) => (
         <input
           {...p}
-          type={extra?.type ?? 'text'}
+          type="text"
           value={draft[key]}
           onChange={(e) => {
             set(key, e.target.value)
@@ -131,7 +132,18 @@ export function WorldEditor({ world }: { world?: AdminWorld }) {
           <Field label="Unlocks at" error={errors.unlockAt} hint="Empty means always open. Your local time.">
             {(p) => <input {...p} type="datetime-local" value={draft.unlockAt} onChange={(e) => set('unlockAt', e.target.value)} />}
           </Field>
-          {text('musicUrl', 'Music link (https)', { type: 'url' })}
+          <Field label="Music" error={errors.musicUrl} hint="Pick a bundled song or paste an https:// link.">
+            {(p) => (
+              <>
+                <input {...p} type="text" list="bundled-songs" value={draft.musicUrl} onChange={(e) => set('musicUrl', e.target.value)} />
+                <datalist id="bundled-songs">
+                  {BUNDLED_SONGS.map((song) => (
+                    <option key={song.path} value={song.path} label={song.label} />
+                  ))}
+                </datalist>
+              </>
+            )}
+          </Field>
           <Field label="Intro text" error={errors.introText} className={styles.wide}>
             {(p) => <textarea {...p} value={draft.introText} onChange={(e) => set('introText', e.target.value)} />}
           </Field>

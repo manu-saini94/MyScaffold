@@ -8,7 +8,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import sessionReducer from '../session/sessionSlice'
 import { api } from '../../services/api'
 import type { Experience, LockedWorldSummary, Moment, OpenWorldDetail, OpenWorldSummary } from '../../types/api'
-import { MUTE_KEY } from './music'
+import { MUTE_KEY } from '../../services/music'
 import { IDLE_MS } from './StoryPlayer'
 import StoryRoute from './StoryRoute'
 import { LOCKED_MS, MOMENT_MIN_MS, TITLE_MS } from './timing'
@@ -139,6 +139,8 @@ describe('StoryPlayer', () => {
     expect(onScreen()).toBe('Chapter 1: First')
     expect(play).toHaveBeenCalledTimes(1)
     expect((play.mock.contexts[0] as HTMLAudioElement).src).toBe(MUSIC)
+    // a short song repeats until the chapter ends
+    expect((play.mock.contexts[0] as HTMLAudioElement).loop).toBe(true)
     // the first chapter and the next open one are fetched while the curtain is up; the locked one never is
     expect(calls).toContain('/api/worlds/first')
     expect(calls).toContain('/api/worlds/last')

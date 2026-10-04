@@ -6,7 +6,7 @@ import { useReducedMotion } from '../../hooks/useReducedMotion'
 import { useGetWorldQuery } from '../../services/experienceApi'
 import { mediaSrcSet, mediaUrl } from '../../services/media'
 import { BottomBar, TopBar, type ChapterProgress } from './Controls'
-import { readMuted, safeMusicUrl, writeMuted } from './music'
+import { readMuted, safeMusicUrl, writeMuted } from '../../services/music'
 import { nextOpenSlug, resolveChapter, slideAt, slideCount, type Chapter, type ChapterContent } from './playlist'
 import { FinalCard, LockedCard, PhotoSlide, TitleCard } from './Slides'
 import {

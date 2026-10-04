@@ -225,7 +225,7 @@ Field set (open): `slug, title, subtitle, tagline, layout, themeAccent, locked, 
 - `revealTrigger`: `WORLD_OUTRO` (reveal after the outro) or `SEALED_ICON` (reveal by opening a sealed icon).
 - **Letter bodies are RAW markdown.** The server never renders HTML. The client MUST render it with a safe renderer
   (no raw HTML, no `innerHTML`/`dangerouslySetInnerHTML` with unsanitised output).
-- `musicUrl` is `https` only or `null`. Nullable fields: `subtitle, tagline, themeAccent, introText, outroText, musicUrl, nextSlug, caption, note, happenedOn, place, takenAt`.
+- `musicUrl` is an `https` URL, a same-origin bundled song path (`/assets/music/<name>.mp3`, see 4.4), or `null`. Nullable fields: `subtitle, tagline, themeAccent, introText, outroText, musicUrl, nextSlug, caption, note, happenedOn, place, takenAt`.
 - ADMIN: locked or unpublished worlds come back in the open shape with `"adminPreview": true`; `locked` is `false`.
 
 ### 3.3 `GET /api/media/{id}/{size}`
@@ -273,8 +273,9 @@ World object (`WorldResponse`): `id, slug, title, subtitle, tagline, layout, cov
 - `POST /api/admin/worlds` -> `201` + `Location`, appended last. Body (`WorldRequest`):
   `{"slug","title","subtitle","tagline","layout","coverMediaId","themeAccent","unlockAt","introText","outroText","musicUrl","published"}`.
   Required: `slug` (kebab, <=64), `title` (<=120), `layout`. `subtitle/tagline` <=200, `introText/outroText` <=2000,
-  `themeAccent` `#rrggbb`, `musicUrl` https <=500 (no userinfo `user@`, spaces, quotes, `<`, `>`, backslashes or control
-  characters), `unlockAt` ISO instant or `null` (open), `published` defaults to true on create.
+  `themeAccent` `#rrggbb`, `musicUrl` <=500, EITHER https (no userinfo `user@`, spaces, quotes, `<`, `>`, backslashes or
+  control characters) OR a bundled song path matching exactly `^/assets/music/[a-z0-9][a-z0-9-]*\.(mp3|m4a|ogg|opus)$`
+  (no `..`, `//`, query or fragment; the files live in `frontend/public/assets/music/`), `unlockAt` ISO instant or `null` (open), `published` defaults to true on create.
   `409` duplicate slug; `422 unknown-media` for a missing cover.
 - `PUT /api/admin/worlds/{id}` -> update (same body; sort order unchanged). Presence matters for two fields:
 

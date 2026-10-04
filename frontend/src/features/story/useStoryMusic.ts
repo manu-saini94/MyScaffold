@@ -1,22 +1,7 @@
 import { useEffect, useRef } from 'react'
-import { FADE_MS, MUSIC_VOLUME, rampVolume } from './music'
+import { MUSIC_VOLUME, fadeTo } from '../../services/music'
 
-const FADE_STEP_MS = 50
-
-/** Ramps `audio.volume` to `to` over FADE_MS; calls `done` at the end. Returns a cancel. */
-function fadeTo(audio: HTMLAudioElement, to: number, done?: () => void): () => void {
-  const from = audio.volume
-  const start = Date.now()
-  const id = window.setInterval(() => {
-    const elapsed = Date.now() - start
-    audio.volume = rampVolume(from, to, elapsed, FADE_MS)
-    if (elapsed >= FADE_MS) {
-      window.clearInterval(id)
-      done?.()
-    }
-  }, FADE_STEP_MS)
-  return () => window.clearInterval(id)
-}
+const FADE_MS = 1400
 
 function start(audio: HTMLAudioElement) {
   // A refused play() (autoplay policy, unreachable file) leaves the story silent; music is optional by design.
@@ -54,11 +39,11 @@ export function useStoryMusic({ url, enabled, playing, muted }: { url: string | 
     audio.muted = mutedRef.current
     current.current = audio
     if (playingRef.current) start(audio)
-    const cancelIn = fadeTo(audio, MUSIC_VOLUME)
+    const cancelIn = fadeTo(audio, MUSIC_VOLUME, FADE_MS)
     return () => {
       cancelIn()
       if (current.current === audio) current.current = null
-      fadeTo(audio, 0, () => audio.pause())
+      fadeTo(audio, 0, FADE_MS, () => audio.pause())
     }
   }, [url, enabled])
 }

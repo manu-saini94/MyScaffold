@@ -53,7 +53,7 @@ export default function WorldRoute() {
   }
 
   return (
-    <WorldFrame slug={slug} accent={data?.themeAccent}>
+    <WorldFrame slug={slug} accent={data?.themeAccent} musicUrl={data ? (data.locked ? null : data.musicUrl) : undefined}>
       {content}
     </WorldFrame>
   )

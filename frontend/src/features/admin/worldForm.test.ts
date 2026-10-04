@@ -22,6 +22,18 @@ describe('validateDraft', () => {
     expect(validateDraft({ ...base, themeAccent: '#b3122f' })).toEqual({})
     expect(validateDraft({ ...base, musicUrl: 'http://x.example' }).musicUrl).toBeDefined()
   })
+
+  it('accepts an https link or a bundled song path for music, nothing else', () => {
+    const base = { ...EMPTY_DRAFT, title: 'T', slug: 's' }
+    expect(validateDraft({ ...base, musicUrl: 'https://music.test/a.mp3' })).toEqual({})
+    expect(validateDraft({ ...base, musicUrl: '/assets/music/kadhalar-dhinam-theme.mp3' })).toEqual({})
+    expect(validateDraft({ ...base, musicUrl: ' /assets/music/a.mp3 ' })).toEqual({})
+    for (const bad of ['/assets/music/../x.mp3', '//evil/x.mp3', '/assets/music/a.mp3?x', 'https://u@h.test/a.mp3']) {
+      expect(validateDraft({ ...base, musicUrl: bad }).musicUrl, bad).toBe(
+        'Use an https:// link or a song path like /assets/music/your-song.mp3',
+      )
+    }
+  })
 })
 
 describe('toWorldRequest', () => {

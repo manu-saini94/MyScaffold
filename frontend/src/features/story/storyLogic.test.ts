@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { LockedWorldSummary, OpenWorldDetail, OpenWorldSummary } from '../../types/api'
 import { kenBurns } from './kenBurns'
-import { rampVolume, safeMusicUrl } from './music'
 import { formatDay, formatRemaining } from './format'
 import { buildChapters, nextOpenSlug, resolveChapter, slideAt, slideCount, type Chapter } from './playlist'
 import {
@@ -159,24 +158,6 @@ describe('kenBurns', () => {
         expect(Math.abs(y)).toBeLessThanOrEqual(((s - 1) / 2) * 100)
       }
     }
-  })
-})
-
-describe('music', () => {
-  it('accepts plain https URLs only', () => {
-    expect(safeMusicUrl('https://example.com/theme.mp3')).toBe('https://example.com/theme.mp3')
-    expect(safeMusicUrl('http://example.com/theme.mp3')).toBeNull()
-    expect(safeMusicUrl('javascript:alert(1)')).toBeNull()
-    expect(safeMusicUrl('https://u:p@example.com/a.mp3')).toBeNull()
-    expect(safeMusicUrl('not a url')).toBeNull()
-    expect(safeMusicUrl(null)).toBeNull()
-  })
-
-  it('ramps volume linearly and clamps', () => {
-    expect(rampVolume(0, 0.7, 0, 1000)).toBe(0)
-    expect(rampVolume(0, 0.8, 500, 1000)).toBeCloseTo(0.4)
-    expect(rampVolume(0.7, 0, 5000, 1000)).toBe(0)
-    expect(rampVolume(0, 1, 10, 0)).toBe(1)
   })
 })
 

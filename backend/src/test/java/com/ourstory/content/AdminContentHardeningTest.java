@@ -127,6 +127,31 @@ class AdminContentHardeningTest extends ContentTestBase {
         }
     }
 
+    @Test
+    void musicUrlAcceptsBundledSongPathsOnlyInTheirExactShape() throws Exception {
+        List<String> bad = List.of("/assets/music/../x.mp3", "//evil/x.mp3", "/assets/music/a.mp3?x",
+                "/assets/music/a.mp3#t", "/assets/music/A.mp3", "/assets/music/-a.mp3", "/assets/music/a.wav",
+                "/assets/music/sub/a.mp3", "/assets/music//a.mp3", "/assets/music/.mp3", "/assets/x.mp3",
+                "assets/music/a.mp3", "/assets/music/a b.mp3", "/assets/music/a.mp3/");
+        for (String url : bad) {
+            send(post("/api/admin/worlds"), world("song-bad", ",\"musicUrl\":\"" + url + "\""))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.errors[?(@.field=='musicUrl')]").exists());
+        }
+        assertThat(worlds.findBySlug("song-bad")).isEmpty();
+        List<String> good = List.of("/assets/music/kadhalar-dhinam-theme.mp3", "/assets/music/a.m4a",
+                "/assets/music/0-song.ogg", "/assets/music/x.opus");
+        for (int i = 0; i < good.size(); i++) {
+            send(post("/api/admin/worlds"), world("song-good-" + i, ",\"musicUrl\":\"" + good.get(i) + "\""))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.musicUrl").value(good.get(i)));
+        }
+        String longPath = "/assets/music/" + "a".repeat(487) + ".mp3";
+        send(post("/api/admin/worlds"), world("song-long", ",\"musicUrl\":\"" + longPath + "\""))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[?(@.field=='musicUrl')]").exists());
+    }
+
     // --- error shape ------------------------------------------------------------------------------------------
 
     @Test

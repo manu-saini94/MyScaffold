@@ -79,6 +79,9 @@
   position: sticky;
   top: var(--space-3); // level with the header's theme toggle
   z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
   padding: 0 var(--space-4);
   margin-bottom: var(--space-4);
   pointer-events: none;
@@ -86,6 +89,48 @@
   @include up($bp-md) {
     padding-inline: var(--space-6);
   }
+}
+
+.music {
+  pointer-events: auto;
+  display: inline-grid;
+  place-items: center;
+  min-width: 2.5rem;
+  height: 2.5rem;
+  padding: 0 0.75rem;
+  border: 0;
+  border-radius: 999px;
+  color: var(--world-ink);
+  font: inherit;
+  font-size: 1.1rem;
+  cursor: pointer;
+  @include glass;
+  transition:
+    transform var(--dur-base) var(--ease-out),
+    opacity var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
+
+  &[aria-pressed='true'] {
+    opacity: 0.55;
+    text-decoration: line-through;
+  }
+
+  &:hover {
+    box-shadow: 0 8px 24px -10px var(--world-accent-glow);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  &:focus-visible {
+    @include focus-ring;
+  }
+}
+
+.musicAsk {
+  font-size: 0.85rem;
+  font-weight: 500;
 }
 
 .back {

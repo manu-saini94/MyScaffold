@@ -17,12 +17,14 @@ public final class ContentDtos {
     static final String ULID = "^[0-7][0-9A-HJKMNP-TV-Z]{25}$";
     static final String ACCENT = "^#[0-9a-fA-F]{6}$";
     /**
-     * https only. The authority (host[:port], up to the first of / ? #) is limited to host characters, so no
-     * userinfo ('@'), quotes, angle brackets, spaces or backslashes; nothing after it may contain those or
-     * control characters either.
+     * Either an https URL or a song bundled with the app. https: the authority (host[:port], up to the first of
+     * / ? #) is limited to host characters, so no userinfo ('@'), quotes, angle brackets, spaces or backslashes;
+     * nothing after it may contain those or control characters either. Bundled: exactly
+     * {@code /assets/music/<kebab name>.(mp3|m4a|ogg|opus)}, so no '..', '//', query or fragment.
      */
-    static final String HTTPS_URL =
-            "^https://[A-Za-z0-9._:\\[\\]-]+(?:[/?#][^\\s<>\"'`\\\\\\x00-\\x1F\\x7F-\\x9F]*)?$";
+    static final String MUSIC_URL =
+            "^(?:https://[A-Za-z0-9._:\\[\\]-]+(?:[/?#][^\\s<>\"'`\\\\\\x00-\\x1F\\x7F-\\x9F]*)?"
+            + "|/assets/music/[a-z0-9][a-z0-9-]*\\.(?:mp3|m4a|ogg|opus))$";
     static final int MAX_MOMENTS = 500;
 
     private ContentDtos() {
@@ -40,7 +42,8 @@ public final class ContentDtos {
             @JsonDeserialize(using = Presence.Deserializer.class) Presence<Instant> unlockAt,
             @Size(max = 2000) String introText,
             @Size(max = 2000) String outroText,
-            @Size(max = 500) @Pattern(regexp = HTTPS_URL, message = "must be an https URL") String musicUrl,
+            @Size(max = 500) @Pattern(regexp = MUSIC_URL,
+                    message = "must be an https URL or a song path like /assets/music/your-song.mp3") String musicUrl,
             Boolean published) {
 
         /** unlockAt as sent, or {@code fallback} when the field was omitted (explicit null yields null). */

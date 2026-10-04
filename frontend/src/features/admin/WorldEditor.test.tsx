@@ -42,6 +42,19 @@ describe('WorldEditor form validation', () => {
     expect(calls).toHaveLength(0)
   })
 
+  it('offers the bundled songs for the music field and still allows free text', () => {
+    stubFetch()
+    renderAdmin(<WorldEditor />)
+    const music = screen.getByLabelText('Music') as HTMLInputElement
+    expect(music.type).toBe('text')
+    const list = document.getElementById(music.getAttribute('list') ?? '')
+    const options = [...(list?.querySelectorAll('option') ?? [])]
+    expect(options.map((o) => o.value)).toContain('/assets/music/kadhalar-dhinam-theme.mp3')
+    expect(options.every((o) => o.label.length > 0)).toBe(true)
+    fireEvent.change(music, { target: { value: 'https://music.test/a.mp3' } })
+    expect(music.value).toBe('https://music.test/a.mp3')
+  })
+
   it('derives the slug from the title until the slug is edited by hand', () => {
     stubFetch()
     renderAdmin(<WorldEditor />)

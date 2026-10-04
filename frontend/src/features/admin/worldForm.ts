@@ -1,3 +1,4 @@
+import { isMusicUrl } from '../../services/music'
 import type { ApiLayout } from '../../types/api'
 import type { AdminWorld, WorldRequest } from './types'
 
@@ -131,7 +132,8 @@ export function validateDraft(draft: WorldDraft): Record<string, string> {
   if (draft.introText.length > 2000) errors.introText = 'At most 2000 characters.'
   if (draft.outroText.length > 2000) errors.outroText = 'At most 2000 characters.'
   if (draft.themeAccent && !ACCENT.test(draft.themeAccent)) errors.themeAccent = 'Use a colour like #b3122f.'
-  if (draft.musicUrl && !draft.musicUrl.trim().startsWith('https://')) errors.musicUrl = 'Must be an https:// link.'
+  if (draft.musicUrl.trim() && !isMusicUrl(draft.musicUrl.trim()))
+    errors.musicUrl = 'Use an https:// link or a song path like /assets/music/your-song.mp3'
   if (draft.unlockAt && fromLocalInput(draft.unlockAt) === null) errors.unlockAt = 'Not a valid date and time.'
   return errors
 }

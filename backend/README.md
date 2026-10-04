@@ -150,7 +150,7 @@ Migration `V4__content.sql` adds three tables (V3 belongs to settings; a version
 
 | Table | Notes |
 |---|---|
-| `world` | ULID id, unique kebab-case `slug`, `layout` (POLAROID_TABLE, FILM_STRIP, POSTCARDS, MEMORY_WALL, ENVELOPE, CONSTELLATION), optional `cover_media_id` (SET NULL when the photo is deleted), `theme_accent` `#rrggbb`, `sort_order`, `unlock_at` (null = open), intro/outro text, `music_url` (https only), `published`. Six default worlds are seeded (Our Forever unlocks 2027-02-14T00:00:00+05:30) |
+| `world` | ULID id, unique kebab-case `slug`, `layout` (POLAROID_TABLE, FILM_STRIP, POSTCARDS, MEMORY_WALL, ENVELOPE, CONSTELLATION), optional `cover_media_id` (SET NULL when the photo is deleted), `theme_accent` `#rrggbb`, `sort_order`, `unlock_at` (null = open), intro/outro text, `music_url` (an https URL or a bundled song path `/assets/music/<name>.mp3|m4a|ogg|opus`; widened by `V6__world_music_bundled_songs.sql`), `published`. Six default worlds are seeded (Our Forever unlocks 2027-02-14T00:00:00+05:30) |
 | `moment` | A photo in a world: caption, note ("back of the polaroid"), `happened_on`, `place`, `sort_order`, `is_favourite`. UNIQUE(world, media). Deleting the world or the photo removes the moment |
 | `letter` | Optional `world_id` (`ON DELETE SET NULL` since `V5__letter_world_set_null.sql`: deleting a world keeps its letters, which then have no world and are not shown to viewers), title, `body` (RAW markdown, <= 20,000 chars, stored as-is; the frontend renders it safely, the server never renders it as HTML), `reveal_trigger` WORLD_OUTRO or SEALED_ICON |
 
@@ -172,7 +172,8 @@ Endpoints (all `/api/admin/**`: admin session, CSRF on mutating calls, errors ar
 Rules: ids must be ULIDs (`400` otherwise); unknown ids `404`; duplicate slug `409`; every validation failure (bean
 validation, malformed JSON, wrong types, settings) is `400` `urn:ourstory:problem:validation-failed` with
 `errors:[{field,message}]` (an array, everywhere; the rejected value is never echoed); `musicUrl` must be an https URL
-without userinfo (`@` before the first `/`), spaces, quotes, `<`, `>`, backslashes or control characters; a write race in
+without userinfo (`@` before the first `/`), spaces, quotes, `<`, `>`, backslashes or control characters, or a
+bundled song path matching exactly `^/assets/music/[a-z0-9][a-z0-9-]*\.(mp3|m4a|ogg|opus)$` (no `..`, `//`, query); a write race in
 the moment replacement is `409 moments-conflict`; moments: at most 500, no duplicate `mediaId`, every `mediaId` must exist (`422` with
 `missingMediaIds`), caption <= 500, note <= 2000, place <= 200; unknown cover media or letter world `422`.
 Content code never touches Google Photos or media files. Read methods for the experience layer:
