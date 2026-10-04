@@ -44,7 +44,6 @@ describe('isMusicUrl', () => {
   })
 
   it('lists only bundled songs that pass the rule', () => {
-    expect(BUNDLED_SONGS.length).toBeGreaterThan(0)
     for (const song of BUNDLED_SONGS) expect(isMusicUrl(song.path), song.path).toBe(true)
   })
 })

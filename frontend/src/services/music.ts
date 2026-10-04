@@ -5,14 +5,9 @@ export const MUSIC_VOLUME = 0.7
 const MAX_LENGTH = 500
 
 /** Songs shipped in frontend/public/assets/music/ (served same-origin from /assets/music/). */
-export const BUNDLED_SONGS: readonly { path: string; label: string }[] = [
-  { path: '/assets/music/kadhalar-dhinam-theme.mp3', label: 'Kadhalar Dhinam (theme)' },
-  { path: '/assets/music/kadhalar-dhinam-bgm.mp3', label: 'Kadhalar Dhinam (BGM)' },
-  { path: '/assets/music/ed-sheeran-tenerife-sea.mp3', label: 'Ed Sheeran - Tenerife Sea' },
-  { path: '/assets/music/ed-patrick-eyes-on-you.mp3', label: 'Ed Patrick - Eyes On You' },
-  { path: '/assets/music/lord-huron-the-night-we-met.mp3', label: 'Lord Huron - The Night We Met' },
-  { path: '/assets/music/tori-harper-after-dark.mp3', label: 'Tori Harper - After Dark' },
-]
+// Songs served from frontend/public/assets/music/ (copied into the jar). None are bundled right now: the owner keeps
+// the source files in frontend/mp3/, which the app does not serve. Add an entry here when a file lands in public.
+export const BUNDLED_SONGS: readonly { path: string; label: string }[] = []
 
 // Mirrors ContentDtos.MUSIC_URL on the server (which stays the authority).
 const SONG_PATH = /^\/assets\/music\/[a-z0-9][a-z0-9-]*\.(?:mp3|m4a|ogg|opus)$/

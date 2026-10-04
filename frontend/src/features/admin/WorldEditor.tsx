@@ -132,7 +132,7 @@ export function WorldEditor({ world }: { world?: AdminWorld }) {
           <Field label="Unlocks at" error={errors.unlockAt} hint="Empty means always open. Your local time.">
             {(p) => <input {...p} type="datetime-local" value={draft.unlockAt} onChange={(e) => set('unlockAt', e.target.value)} />}
           </Field>
-          <Field label="Music" error={errors.musicUrl} hint="Pick a bundled song or paste an https:// link.">
+          <Field label="Music" error={errors.musicUrl} hint="Paste an https:// link to an audio file (mp3, m4a, ogg).">
             {(p) => (
               <>
                 <input {...p} type="text" list="bundled-songs" value={draft.musicUrl} onChange={(e) => set('musicUrl', e.target.value)} />
